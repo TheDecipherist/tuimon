@@ -1,17 +1,37 @@
 # TuiMon
 
-> Render beautiful HTML dashboards directly in your terminal.
+> Render beautiful dashboards directly in your terminal. Zero config required.
 
-## Terminal Requirements
+## The Simplest Way to Visualize Data in Your Terminal
 
-| Terminal   | Protocol | Status     |
-|-----------|----------|------------|
-| Kitty     | Kitty    | Supported  |
-| Ghostty   | Kitty    | Supported  |
-| WezTerm   | Kitty    | Supported  |
-| iTerm2    | iTerm2   | Supported  |
-| VSCode    | Sixel    | Supported (requires setting) |
-| mlterm    | Sixel    | Supported  |
+```bash
+# Visualize any data file instantly
+tuimon data.json
+tuimon users.csv
+tuimon /var/log/nginx/access.log
+
+# Live monitoring from a data function
+tuimon watch metrics.js
+
+# Poll a JSON API
+tuimon watch --url http://localhost:3000/metrics
+
+# Full custom dashboard (HTML/CSS/JS)
+tuimon start
+```
+
+No HTML. No config files. No charting libraries. Just point TuiMon at your data.
+
+## Terminal Support
+
+| Terminal | Protocol | Status |
+|----------|----------|--------|
+| Kitty | Kitty | Supported |
+| Ghostty | Kitty | Supported |
+| WezTerm | Kitty | Supported |
+| iTerm2 | iTerm2 | Supported |
+| **VSCode** | Sixel | **Supported** (requires one setting) |
+| mlterm | Sixel | Supported |
 
 ### VSCode Setup
 
@@ -21,32 +41,102 @@ VSCode supports terminal images but it's **off by default**. Running `tuimon ini
 { "terminal.integrated.enableImages": true }
 ```
 
-If you're adding TuiMon to an existing project, add that setting manually or run `tuimon init`.
-
 ## Quick Start
 
 ```bash
-npx tuimon init
-npx tuimon check
-npx tuimon start
+npm install -g tuimon
+tuimon check          # verify your terminal supports graphics
 ```
 
-Or install globally:
+## 1. Instant File Visualization
+
+Point TuiMon at any data file — it auto-detects the format, picks the right charts, and renders a dashboard:
 
 ```bash
-npm install -g tuimon
-tuimon init && tuimon start
+# JSON array → table + charts
+tuimon users.json
+
+# CSV → table + charts
+tuimon sales.csv
+
+# Nginx access log → request stats + table
+tuimon /var/log/nginx/access.log
+
+# ModSecurity audit log → security dashboard
+tuimon /var/log/modsec_audit.log
+
+# Filter columns
+tuimon access.log --columns "Timestamp,IP,Path,Status"
 ```
 
-## How It Works
+**Auto-detected formats:**
+- **JSON/JSONL** — arrays of objects → table + stat cards + charts
+- **CSV/TSV** — auto-detects delimiter, header row, column types
+- **Nginx combined log** — request stats, status codes, top endpoints/IPs, browsable request table
+- **ModSecurity audit log** — security events, severity distribution, attack categories, top attacker IPs
+- **JSON logs** — level distribution, latest entries
+- **Plain text** — live tail
 
-TuiMon renders your HTML pages in a headless Chromium browser via Playwright, screenshots them as PNG, and streams the images to your terminal using the Kitty graphics protocol (or Sixel as fallback). You write dashboards as normal HTML/CSS/JS — any charting library works.
+**Features:**
+- Press **D** to switch to full-screen data table view, **ESC** to go back
+- Arrow keys / PgUp / PgDn to navigate table pages
+- **F5** to reload file, **F10** to quit
+- File is **watched** — dashboard updates when the file changes on disk
 
-## Zero-HTML Mode (Default Template)
+## 2. Live Data Monitoring
 
-Don't want to write HTML? Use the built-in declarative dashboard — just define widgets and push data:
+Create a JS file that exports a data function — TuiMon handles the rest:
+
+```js
+// metrics.js
+const os = require('os')
+
+module.exports = () => ({
+  cpu: Math.round(100 - (os.cpus().reduce((a,c) => a + c.times.idle, 0) / os.cpus().reduce((a,c) => a + Object.values(c.times).reduce((x,y) => x+y, 0), 0)) * 100),
+  memory: Math.round((1 - os.freemem() / os.totalmem()) * 100),
+  uptime: Math.round(process.uptime()) + 's',
+})
+```
+
+```bash
+tuimon watch metrics.js
+```
+
+TuiMon inspects the returned data and auto-creates the right widgets:
+
+| Data type | Widget |
+|-----------|--------|
+| Number (0-100 + name like cpu/mem) | Gauge |
+| Number (other) | Stat card |
+| String | Stat card |
+| `{ key: number, ... }` (2+ keys) | Line chart (auto-accumulates history) |
+| `{ key: number }` | Bar chart |
+| `['string', ...]` | Event log (auto-timestamped) |
+| `[{ label, status }, ...]` | Status grid (colored dots) |
+
+**Export options:**
+
+```js
+module.exports = () => ({ ... })    // data function (required)
+module.exports.refresh = 500        // refresh interval in ms (default: 1000)
+module.exports.title = 'My App'     // dashboard title
+module.exports.layout = { ... }     // override auto-detected layout
+```
+
+### Poll a JSON API
+
+```bash
+tuimon watch --url http://localhost:3000/metrics
+tuimon watch --url http://localhost:3000/metrics --interval 2000
+```
+
+## 3. Zero-HTML Declarative Dashboard
+
+For more control without writing HTML, define widgets in a layout config:
 
 ```typescript
+import tuimon from 'tuimon'
+
 const dash = await tuimon.start({
   pages: {
     overview: {
@@ -60,31 +150,53 @@ const dash = await tuimon.start({
         panels: [
           { id: 'traffic', label: 'Traffic', type: 'line', span: 2 },
           { id: 'services', label: 'Services', type: 'doughnut' },
-          { id: 'events', label: 'Events', type: 'event-log' },
-          { id: 'health', label: 'Health', type: 'status-grid' },
+          { id: 'events', label: 'Events', type: 'event-log', throttle: 2000 },
+          { id: 'health', label: 'Health', type: 'status-grid', throttle: 5000 },
         ],
       },
     },
   },
-  refresh: 1000,
+  refresh: 500,
   data: () => ({
-    users: getOnlineCount(),        // just a number
-    cpu: getCpuPercent(),            // just a number (0-100)
-    traffic: { Requests: 340, Errors: 12 },  // keys = series
-    services: { Web: 47, API: 27 },          // keys = slices
-    events: ['Deploy completed'],             // auto-timestamped
-    health: ['Node-1', 'Node-2'],             // all assumed "ok"
+    users: getOnlineCount(),
+    cpu: getCpuPercent(),
+    traffic: { Requests: 340, Errors: 12 },
+    services: { Web: 47, API: 27 },
+    events: ['Deploy completed'],
+    health: ['Node-1', 'Node-2'],
   }),
 })
 ```
 
-**Widget types:** `stat`, `gauge`, `line`, `doughnut`, `bar`, `event-log`, `status-grid`
+**8 widget types:** `stat`, `gauge`, `line`, `doughnut`, `bar`, `event-log`, `status-grid`, `table`
 
-Every widget accepts a **lazy format** (just numbers/strings) or a **detailed format** (full control). Line charts accumulate history automatically — just send current values.
+**Per-widget throttle:** Each widget can have its own update rate — charts update every frame while event logs and status grids update less frequently.
 
-## Multi-Page Navigation
+**Lazy data format:** Every widget accepts the simplest possible data. Just send numbers — TuiMon figures out the rest:
 
-Define multiple pages with keyboard shortcuts:
+```typescript
+dash.render({
+  users: 42,                              // number → stat
+  cpu: 73,                                // number → gauge (0-100)
+  traffic: { Requests: 340, Errors: 12 }, // object → line chart (history auto-accumulated)
+  services: { Web: 47, API: 27 },         // object → doughnut
+  events: ['Deploy completed'],           // string[] → event-log (auto-timestamped)
+  health: ['Node-1', 'Node-2'],           // string[] → status-grid (all "ok")
+})
+```
+
+## 4. Full Custom HTML Dashboard
+
+For complete control, write your dashboard as normal HTML/CSS/JS:
+
+```bash
+tuimon init    # scaffolds starter project
+tuimon start   # runs it
+```
+
+TuiMon renders your HTML pages in a headless Chromium browser via Playwright, screenshots them as PNG, and streams the images to your terminal. Any charting library works — Chart.js, D3, ECharts, anything.
+
+### Multi-Page Navigation
 
 ```typescript
 const dash = await tuimon.start({
@@ -99,102 +211,78 @@ const dash = await tuimon.start({
       shortcut: 'g',
       label: 'CPU Detail',
     },
-    memory: {
-      html: './pages/memory-detail.html',
-      shortcut: 'm',
-      label: 'Memory',
-    },
   },
 })
 ```
 
-- Press a shortcut key from the overview to jump to a detail page
-- Press **ESC** on a detail page to return to overview
-- Press **ESC** on overview to show quit confirmation
-- Press **Ctrl+C** anywhere to exit immediately
+- Press a shortcut key to jump to a detail page
+- **ESC** on detail page returns to overview
+- **ESC** on overview shows quit confirmation
+- **Ctrl+C** exits immediately from anywhere
 
-Add shortcut badges to HTML panels with data attributes:
-
-```html
-<div class="panel" data-tm-key="g" data-tm-label="CPU Detail">
-  <!-- panel content -->
-</div>
-```
-
-## Per-Page F-Key Bindings
-
-Each page defines its own F-key actions:
+### Per-Page F-Key Bindings
 
 ```typescript
-pages: {
-  overview: {
-    html: './pages/overview.html',
-    default: true,
-    keys: {
-      F5: { label: 'Refresh', action: async () => dash.render(await getData()) },
-      F10: { label: 'Quit', action: () => process.exit(0) },
-    },
-  },
+keys: {
+  F5: { label: 'Refresh', action: async () => dash.render(await getData()) },
+  F10: { label: 'Quit', action: () => process.exit(0) },
 }
 ```
 
-The F-key bar at the bottom always reflects the active page's bindings.
+### Client Library
 
-## API Reference
-
-### `tuimon.start(options: TuiMonOptions): Promise<TuiMonDashboard>`
-
-```typescript
-interface TuiMonOptions {
-  pages: Record<string, PageConfig>
-  data?: () => Record<string, unknown> | Promise<Record<string, unknown>>
-  refresh?: number    // auto-render interval in ms
-  renderDelay?: number // delay after pushData before screenshot (default: 50)
-}
-
-interface PageConfig {
-  html: string           // path to HTML file
-  default?: boolean      // exactly one page must be default
-  shortcut?: string      // single lowercase letter
-  label?: string         // human-readable name
-  keys?: Partial<Record<FKey, KeyBinding>>
-}
-
-interface KeyBinding {
-  label: string
-  action: () => void | Promise<void>
-}
-```
-
-### `dash.render(data): Promise<void>`
-
-Push data to the current page and re-render.
-
-### `dash.stop(): Promise<void>`
-
-Gracefully shut down — restores terminal state.
-
-## Client Library
-
-In your HTML pages, use the injected `TuiMon` object:
+In your HTML pages, the injected `TuiMon` object receives data:
 
 ```javascript
-// Listen for data updates
 TuiMon.onUpdate(function(data) {
   TuiMon.set('#cpu', data.cpu)
   TuiMon.set('#memory', data.memory + '%')
 })
-
-// TuiMon.set(selector, value) — sets text content or applies styles
-// TuiMon.notify(message, duration) — dispatches a notification event
 ```
+
+Add shortcut badges to panels with data attributes:
+
+```html
+<div class="panel" data-tm-key="g" data-tm-label="CPU Detail">
+```
+
+## CLI Reference
+
+| Command | Description |
+|---------|-------------|
+| `tuimon <file>` | Visualize a JSON, CSV, or log file |
+| `tuimon watch <file.js>` | Live dashboard from a data module |
+| `tuimon watch --url <url>` | Poll a JSON endpoint |
+| `tuimon start` | Run from tuimon.config.ts |
+| `tuimon init` | Scaffold a starter project + enable VSCode |
+| `tuimon check` | Check terminal graphics support |
+
+**Options:**
+- `-c, --columns <cols>` — comma-separated list of columns to display
+- `--interval <ms>` — poll interval for URL watch mode (default: 1000)
+
+**Environment:**
+- `TUIMON_DEBUG=1` — print per-frame timing to stderr
+
+## How It Works
+
+```
+Your data → TuiMon → Headless Chromium → Screenshot → Kitty/Sixel → Terminal
+```
+
+1. Your data is pushed to an HTML page running in headless Chromium
+2. Playwright takes a PNG screenshot
+3. The image is encoded as Kitty graphics protocol (or Sixel fallback)
+4. Written directly to your terminal's stdout
+
+Typical frame time: **~50ms** (at 250ms refresh = 4 FPS with headroom to spare).
 
 ## Contributing
 
 - **TDD required** — write tests first, implementation second
 - Coverage thresholds: 80% lines, 80% functions, 75% branches
 - `npm test` must pass before any PR
-- Strict TypeScript — `strict: true`, no `any`
+- Strict TypeScript — `strict: true`, `noUncheckedIndexedAccess`, no `any`
 
 ## License
 
