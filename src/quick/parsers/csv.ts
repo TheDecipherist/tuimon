@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import type { TableData } from '../types.js'
+import { detectMeta } from './detect-meta.js'
 
 const MAX_ROWS = 1000
 
@@ -169,46 +170,4 @@ function convertValue(raw: string): unknown {
   return trimmed
 }
 
-function detectMeta(
-  columns: string[],
-  rows: Record<string, unknown>[],
-): {
-  numericColumns: string[]
-  booleanColumns: string[]
-  categoricalColumns: string[]
-} {
-  const numericColumns: string[] = []
-  const booleanColumns: string[] = []
-  const categoricalColumns: string[] = []
-
-  for (const col of columns) {
-    const values = rows.map((r) => r[col]).filter((v) => v !== null && v !== undefined && v !== '')
-
-    if (values.length === 0) continue
-
-    // Check numeric
-    const allNumeric = values.every((v) => typeof v === 'number')
-    if (allNumeric) {
-      numericColumns.push(col)
-      continue
-    }
-
-    // Check boolean
-    const allBoolean = values.every((v) => typeof v === 'boolean')
-    if (allBoolean) {
-      booleanColumns.push(col)
-      continue
-    }
-
-    // Check categorical (< 10 unique string values)
-    const stringValues = values.filter((v) => typeof v === 'string') as string[]
-    if (stringValues.length === values.length) {
-      const unique = new Set(stringValues)
-      if (unique.size < 10) {
-        categoricalColumns.push(col)
-      }
-    }
-  }
-
-  return { numericColumns, booleanColumns, categoricalColumns }
-}
+// detectMeta is imported from ./detect-meta.js

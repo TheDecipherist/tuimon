@@ -152,8 +152,8 @@ function modsecLayout(data: ModSecData, title: string): LayoutConfig {
 // ─── Live data layout (auto-detect from first data call) ─────────────────────
 
 function liveLayout(title: string): LayoutConfig {
-  // Placeholder — actual layout is built after first data() call
-  return { title, stats: [], panels: [] }
+  // Placeholder with a single stat so validateLayout doesn't throw
+  return { title, stats: [{ id: '_status', label: 'Status', type: 'stat' }] }
 }
 
 // ─── Convert parsed data to render-ready widget data ─────────────────────────
@@ -175,7 +175,7 @@ function tableToWidgetData(data: TableData): Record<string, unknown> {
   const result: Record<string, unknown> = {
     _rows: data.meta.totalRows,
     _cols: data.columns.length,
-    _table: { columns: data.columns, rows: data.rows.slice(0, 100) },
+    _table: { columns: data.columns, rows: data.rows },
   }
 
   // Numeric column averages

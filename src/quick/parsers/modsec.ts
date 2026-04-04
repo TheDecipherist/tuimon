@@ -6,8 +6,6 @@ const MAX_EVENTS = 10000
 const SECTION_RE = /^--([a-zA-Z0-9@._-]+)-([A-Z])--$/
 
 const RULE_ID_RE = /\[id "(\d+)"\]/g
-const RULE_MSG_RE = /\[msg "([^"]+)"\]/g
-const RULE_SEV_RE = /\[severity "([^"]+)"\]/g
 const RULE_TAG_RE = /\[tag "([^"]+)"\]/g
 const ACTION_RE = /Action: (\S+)/
 

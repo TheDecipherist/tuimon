@@ -23,8 +23,8 @@ function parseFile(filePath: string): ParsedData {
     case 'csv':
       return parseCsvFile(filePath)
     case 'log': {
-      const content = readFileSync(filePath, 'utf-8')
-      const format = detectLogFormat(content)
+      // Read once, detect format, then parse (avoids double-read)
+      const format = detectLogFormat(readFileSync(filePath, 'utf-8').slice(0, 4096))
       if (format === 'modsec') return parseModSecFile(filePath)
       return parseLogFile(filePath)
     }
@@ -126,7 +126,7 @@ export async function startFileMode(filePath: string, opts?: FileModeOptions): P
       layout: overviewLayout,
       keys: {
         F5: { label: 'Reload', action: async () => { reload(); await dash.render(getAllData()) } },
-        F10: { label: 'Quit', action: () => process.exit(0) },
+        F10: { label: 'Quit', action: () => { void watcher.close().then(() => process.exit(0)) } },
       },
     },
   }
@@ -142,7 +142,7 @@ export async function startFileMode(filePath: string, opts?: FileModeOptions): P
       },
       keys: {
         F5: { label: 'Reload', action: async () => { reload(); await dash.render(getAllData()) } },
-        F10: { label: 'Quit', action: () => process.exit(0) },
+        F10: { label: 'Quit', action: () => { void watcher.close().then(() => process.exit(0)) } },
       },
     }
 

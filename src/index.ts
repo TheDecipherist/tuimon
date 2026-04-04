@@ -158,8 +158,10 @@ async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
   async function renderFrame(data?: Record<string, unknown>): Promise<void> {
     if (stopped || rendering || resizing) return
     rendering = true
-    // Safety: force-unlock rendering after 5s in case it hangs
-    renderTimeout = setTimeout(() => { rendering = false }, 5000)
+    // Safety: if render takes >5s, log warning but don't force-unlock (avoids race)
+    renderTimeout = setTimeout(() => {
+      console.error('[tuimon] render frame exceeded 5s — possible hang')
+    }, 5000)
     const t0 = performance.now()
     try {
       if (data) lastData = data

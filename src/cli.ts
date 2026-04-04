@@ -44,7 +44,8 @@ program
         const { tmpdir } = await import('node:os')
         const tmpPath = path.join(tmpdir(), `tuimon-stdin-${Date.now()}.json`)
         writeFileSync(tmpPath, Buffer.concat(chunks))
-        const columns = opts.columns?.split(',').map((c) => c.trim()) ?? undefined
+        process.once('beforeExit', () => { try { require('node:fs').unlinkSync(tmpPath) } catch {} })
+        const columns = opts.columns ? opts.columns.split(',').map((c) => c.trim()).filter(Boolean) : undefined
         await startFileMode(tmpPath, { columns })
         return
       }
@@ -52,7 +53,7 @@ program
       return
     }
 
-    const columns = opts.columns?.split(',').map((c) => c.trim()) ?? undefined
+    const columns = opts.columns ? opts.columns.split(',').map((c) => c.trim()).filter(Boolean) : undefined
 
     // Quick mode: detect file type and visualize
     const { detectInputType } = await import('./quick/detect.js')
