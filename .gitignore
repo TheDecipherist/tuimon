@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.*
+.env.local
+*.tsbuildinfo
+coverage/
+.claude/
+_ai_temp/
+docs/

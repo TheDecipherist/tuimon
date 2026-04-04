@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quit TuiMon?</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.85);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      color: #c9d1d9;
+    }
+    .card {
+      background: #1c2128;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 48px 64px;
+      text-align: center;
+      max-width: 480px;
+    }
+    h1 {
+      color: #ffffff;
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .subtitle {
+      color: #8b949e;
+      font-size: 16px;
+      margin-bottom: 32px;
+    }
+    .keys {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .key {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 18px;
+      font-weight: 500;
+    }
+    .key-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: 700;
+      font-family: monospace;
+    }
+    .key-badge.yes {
+      background: #da3633;
+      color: #ffffff;
+    }
+    .key-badge.no {
+      background: #238636;
+      color: #ffffff;
+    }
+    .esc-note {
+      color: #484f58;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Quit TuiMon?</h1>
+    <p class="subtitle">Press Y to confirm or N to cancel</p>
+    <div class="keys">
+      <div class="key">
+        <span class="key-badge yes">Y</span>
+        <span class="key-label">Confirm</span>
+      </div>
+      <div class="key">
+        <span class="key-badge no">N</span>
+        <span class="key-label">Cancel</span>
+      </div>
+    </div>
+    <p class="esc-note">ESC also cancels</p>
+  </div>
+</body>
+</html>
