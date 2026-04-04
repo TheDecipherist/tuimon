@@ -61,6 +61,9 @@ function panelHtml(w: WidgetConfig): string {
     case 'status-grid':
       inner = `<div class="status-grid" id="grid-${w.id}"></div>`
       break
+    case 'table':
+      inner = `<div class="table-wrap" id="table-${w.id}"><div class="event-empty">Waiting for data...</div></div>`
+      break
     default:
       inner = `<div id="content-${w.id}"></div>`
   }
@@ -229,6 +232,54 @@ function generateCss(t: ThemeConfig): string {
     .status-dot.error { background: ${t.danger}; box-shadow: 0 0 6px ${t.danger}66; }
     .status-dot.unknown { background: ${t.textMuted}; }
     .status-label { color: ${t.text}; }
+
+    /* ── Table ── */
+    .table-wrap {
+      flex: 1;
+      overflow: hidden;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+    .table-scroll {
+      flex: 1;
+      overflow: hidden;
+    }
+    .table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: monospace;
+    }
+    .table-wrap th {
+      position: sticky;
+      top: 0;
+      background: ${t.bg};
+      color: ${t.accent};
+      text-align: left;
+      padding: 6px 10px;
+      border-bottom: 1px solid ${t.border}44;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .table-wrap td {
+      padding: 4px 10px;
+      border-bottom: 1px solid ${t.border}15;
+      color: ${t.text};
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 300px;
+    }
+    .table-wrap tr:nth-child(even) td { background: ${t.border}08; }
+    .table-wrap td.num { color: ${t.accent}; }
+    .table-info {
+      font-size: 11px;
+      color: ${t.accent};
+      padding: 6px 0 2px;
+      flex-shrink: 0;
+      border-top: 1px solid ${t.border}33;
+    }
   `
 }
 
@@ -461,6 +512,95 @@ function generateJs(layout: LayoutConfig, t: ThemeConfig): string {
         }).join('');
       }
 
+      // ── Table with pagination ──
+      var tableState = {};  // { id: { data, page, perPage } }
+
+      function updateTable(id, data) {
+        var wrap = document.getElementById('table-' + id);
+        if (!wrap || !data || !data.columns || !data.rows) return;
+
+        if (!tableState[id]) {
+          tableState[id] = { data: data, page: 0, perPage: 25 };
+        } else {
+          tableState[id].data = data;
+        }
+
+        renderTablePage(id);
+      }
+
+      function renderTablePage(id) {
+        var wrap = document.getElementById('table-' + id);
+        var state = tableState[id];
+        if (!wrap || !state) return;
+
+        var data = state.data;
+        var cols = data.columns;
+        var allRows = data.rows;
+
+        // Auto-calculate rows per page based on panel height
+        // ~22px per row, ~30px header, ~25px footer
+        var wrapH = wrap.clientHeight || 300;
+        var perPage = Math.max(5, Math.floor((wrapH - 65) / 22));
+        state.perPage = perPage;
+
+        var totalPages = Math.max(1, Math.ceil(allRows.length / perPage));
+        if (state.page >= totalPages) state.page = totalPages - 1;
+        if (state.page < 0) state.page = 0;
+
+        var start = state.page * perPage;
+        var pageRows = allRows.slice(start, start + perPage);
+
+        var tableHtml = '<table><thead><tr>';
+        cols.forEach(function(c) { tableHtml += '<th>' + c + '</th>'; });
+        tableHtml += '</tr></thead><tbody>';
+        pageRows.forEach(function(row) {
+          tableHtml += '<tr>';
+          cols.forEach(function(c) {
+            var val = row[c];
+            var isNum = typeof val === 'number';
+            tableHtml += '<td' + (isNum ? ' class="num"' : '') + '>'
+              + (val != null ? (isNum ? val.toLocaleString() : String(val)) : '')
+              + '</td>';
+          });
+          tableHtml += '</tr>';
+        });
+        tableHtml += '</tbody></table>';
+
+        var html = '<div class="table-scroll">' + tableHtml + '</div>';
+
+        if (totalPages > 1) {
+          html += '<div class="table-info">'
+            + '\u25C0 Page ' + (state.page + 1) + ' of ' + totalPages
+            + ' (' + allRows.length.toLocaleString() + ' rows) \u25B6'
+            + '  |  \u2191\u2193 Arrow keys to navigate'
+            + '</div>';
+        } else if (allRows.length > 0) {
+          html += '<div class="table-info">' + allRows.length.toLocaleString() + ' rows</div>';
+        }
+
+        wrap.innerHTML = html;
+      }
+
+      // Listen for page navigation keys from TuiMon
+      window.addEventListener('tuimon:tableNav', function(e) {
+        var detail = e.detail;
+        var ids = Object.keys(tableState);
+        if (ids.length === 0) return;
+        var id = ids[0]; // navigate first table
+        var state = tableState[id];
+        if (!state) return;
+
+        var totalPages = Math.max(1, Math.ceil(state.data.rows.length / state.perPage));
+
+        switch (detail.action) {
+          case 'next': state.page = Math.min(state.page + 1, totalPages - 1); break;
+          case 'prev': state.page = Math.max(state.page - 1, 0); break;
+          case 'first': state.page = 0; break;
+          case 'last': state.page = totalPages - 1; break;
+        }
+        renderTablePage(id);
+      });
+
       // ── Main update handler ──
       TuiMon.onUpdate(function(data) {
         var timeEl = document.getElementById('dash-time');
@@ -489,6 +629,7 @@ function generateJs(layout: LayoutConfig, t: ThemeConfig): string {
             case 'bar': updateBar(id, val); break;
             case 'event-log': updateEventLog(id, val); break;
             case 'status-grid': updateStatusGrid(id, val); break;
+            case 'table': updateTable(id, val); break;
           }
         });
       });

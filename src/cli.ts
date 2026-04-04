@@ -26,9 +26,88 @@ program
   .description('Render beautiful HTML dashboards directly in your terminal.')
   .version('0.1.0')
 
+// ─── Default command: tuimon <file> ──────────────────────────────────────────
+
+program
+  .argument('[file]', 'JSON, CSV, or log file to visualize')
+  .option('-c, --columns <cols>', 'Comma-separated list of columns to display (e.g. "ip,path,status")')
+  .action(async (file: string | undefined, opts: { columns?: string }) => {
+    if (!file) {
+      // Check if stdin is piped
+      if (!process.stdin.isTTY) {
+        const { startFileMode } = await import('./quick/file-mode.js')
+        // Read stdin to temp file and display
+        const chunks: Buffer[] = []
+        for await (const chunk of process.stdin) {
+          chunks.push(chunk as Buffer)
+        }
+        const { tmpdir } = await import('node:os')
+        const tmpPath = path.join(tmpdir(), `tuimon-stdin-${Date.now()}.json`)
+        writeFileSync(tmpPath, Buffer.concat(chunks))
+        const columns = opts.columns?.split(',').map((c) => c.trim()) ?? undefined
+        await startFileMode(tmpPath, { columns })
+        return
+      }
+      program.help()
+      return
+    }
+
+    const columns = opts.columns?.split(',').map((c) => c.trim()) ?? undefined
+
+    // Quick mode: detect file type and visualize
+    const { detectInputType } = await import('./quick/detect.js')
+    const inputType = detectInputType(file)
+
+    if (inputType === 'module') {
+      const { startWatchModule } = await import('./quick/watch-mode.js')
+      await startWatchModule(file)
+    } else if (inputType === 'url') {
+      const { startWatchUrl } = await import('./quick/watch-mode.js')
+      await startWatchUrl(file)
+    } else {
+      if (!existsSync(file)) {
+        console.error(`[tuimon] File not found: ${file}`)
+        process.exit(1)
+      }
+      const { startFileMode } = await import('./quick/file-mode.js')
+      await startFileMode(file, { columns })
+    }
+  })
+
+// ─── Watch command: tuimon watch <file|--url> ────────────────────────────────
+
+program
+  .command('watch <file>')
+  .description('Watch a JS/TS data module or file for live updates')
+  .option('--url <url>', 'Poll a JSON endpoint instead of a file')
+  .option('--interval <ms>', 'Poll interval in ms (default: 1000)', '1000')
+  .action(async (file: string, opts: { url?: string; interval: string }) => {
+    if (opts.url) {
+      const { startWatchUrl } = await import('./quick/watch-mode.js')
+      await startWatchUrl(opts.url, parseInt(opts.interval, 10))
+    } else {
+      const { detectInputType } = await import('./quick/detect.js')
+      const inputType = detectInputType(file)
+
+      if (inputType === 'module') {
+        const { startWatchModule } = await import('./quick/watch-mode.js')
+        await startWatchModule(file)
+      } else {
+        if (!existsSync(file)) {
+          console.error(`[tuimon] File not found: ${file}`)
+          process.exit(1)
+        }
+        const { startFileMode } = await import('./quick/file-mode.js')
+        await startFileMode(file)
+      }
+    }
+  })
+
+// ─── Start command: tuimon start (full config mode) ──────────────────────────
+
 program
   .command('start')
-  .description('Start a TuiMon dashboard')
+  .description('Start a TuiMon dashboard from a config file')
   .option('-c, --config <path>', 'Path to config file', 'tuimon.config.ts')
   .action(async (opts: { config: string }) => {
     const configPath = path.resolve(process.cwd(), opts.config)
@@ -37,9 +116,10 @@ program
       console.error('[tuimon] Run "tuimon init" to create a starter project.')
       process.exit(1)
     }
-    // Dynamic import of the config — it self-starts
     await import(configPath)
   })
+
+// ─── Init command ────────────────────────────────────────────────────────────
 
 program
   .command('init')
@@ -69,9 +149,7 @@ program
     if (existsSync(vscodeSettings)) {
       try {
         settings = JSON.parse(readFileSync(vscodeSettings, 'utf-8')) as Record<string, unknown>
-      } catch {
-        // malformed JSON — overwrite
-      }
+      } catch { /* overwrite */ }
     }
 
     if (!settings['terminal.integrated.enableImages']) {
@@ -91,6 +169,8 @@ program
     console.log('  Next steps:')
     console.log('    npx tuimon start')
   })
+
+// ─── Check command ───────────────────────────────────────────────────────────
 
 program
   .command('check')
@@ -115,7 +195,6 @@ program
       console.log('  TuiMon requires Kitty, iTerm2, or Sixel graphics support.')
     }
 
-    // VSCode-specific hint
     if (process.env['TERM_PROGRAM'] === 'vscode') {
       console.log('')
       console.log('  VSCode detected \u2014 make sure this setting is enabled:')

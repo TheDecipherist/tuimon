@@ -1,6 +1,6 @@
 // ─── Widget types ────────────────────────────────────────────────────────────
 
-export type WidgetType = 'stat' | 'gauge' | 'line' | 'doughnut' | 'bar' | 'event-log' | 'status-grid'
+export type WidgetType = 'stat' | 'gauge' | 'line' | 'doughnut' | 'bar' | 'event-log' | 'status-grid' | 'table'
 
 export interface WidgetConfig {
   /** Data key — dash.render({ [id]: value }) */

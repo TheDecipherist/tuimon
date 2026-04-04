@@ -219,7 +219,17 @@ async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
     confirmQuitHtml: '/tuimon/confirm-quit.html',
   })
 
-  // Key handler — intercept Ctrl+C for emergency exit, forward rest to router
+  // Arrow/Page key → table navigation action mapping
+  const NAV_KEYS: Record<string, string> = {
+    '\x1b[B': 'next',   // Arrow Down
+    '\x1b[A': 'prev',   // Arrow Up
+    '\x1b[6~': 'next',  // Page Down
+    '\x1b[5~': 'prev',  // Page Up
+    '\x1b[F': 'last',   // End
+    '\x1b[H': 'first',  // Home
+  }
+
+  // Key handler — intercept Ctrl+C for emergency exit, nav keys for tables
   const keyHandler = startKeyHandler({
     onKey: (key: string) => {
       // Ctrl+C: synchronous emergency cleanup and exit
@@ -230,6 +240,16 @@ async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
         process.exit(0)
         return
       }
+
+      // Arrow/Page keys: dispatch table navigation to browser
+      const navAction = NAV_KEYS[key]
+      if (navAction) {
+        browser.evaluate(`window.dispatchEvent(new CustomEvent('tuimon:tableNav', { detail: { action: '${navAction}' } }))`)
+          .then(() => renderFrame())
+          .catch(() => {})
+        return
+      }
+
       router.handleKey(key).catch((err) => {
         console.error('[tuimon] key handler error:', err)
       })

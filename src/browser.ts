@@ -67,6 +67,10 @@ export async function createBrowser({
       await page.setViewportSize({ width: w, height: h })
     },
 
+    async evaluate(expression: string): Promise<void> {
+      await page.evaluate(expression)
+    },
+
     async close(): Promise<void> {
       await browser.close()
     },

@@ -109,6 +109,7 @@ export interface BrowserHandle {
   pushData: (data: Record<string, unknown>) => Promise<void>
   navigate: (url: string) => Promise<void>
   resize: (width: number, height: number) => Promise<void>
+  evaluate: (expression: string) => Promise<void>
   close: () => Promise<void>
 }
 
