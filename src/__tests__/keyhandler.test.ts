@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { EventEmitter } from 'node:events'
 
-let mockStdin: EventEmitter & { setRawMode: ReturnType<typeof vi.fn>; resume: ReturnType<typeof vi.fn> }
+let mockStdin: EventEmitter & { setRawMode: ReturnType<typeof vi.fn>; resume: ReturnType<typeof vi.fn>; pause: ReturnType<typeof vi.fn>; isTTY: boolean }
 
 beforeEach(() => {
-  mockStdin = Object.assign(new EventEmitter(), { setRawMode: vi.fn(), resume: vi.fn() })
+  mockStdin = Object.assign(new EventEmitter(), { setRawMode: vi.fn(), resume: vi.fn(), pause: vi.fn(), isTTY: true })
   vi.spyOn(process, 'stdin', 'get').mockReturnValue(mockStdin as unknown as typeof process.stdin)
 })
 

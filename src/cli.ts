@@ -2,9 +2,19 @@
 
 import { Command } from 'commander'
 import path from 'node:path'
-import { existsSync, mkdirSync, cpSync } from 'node:fs'
+import { existsSync, mkdirSync, cpSync, readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { detectGraphicsSupport } from './detect.js'
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[tuimon] Unhandled rejection:', reason)
+  process.exit(1)
+})
+
+process.on('uncaughtException', (error) => {
+  console.error('[tuimon] Uncaught exception:', error)
+  process.exit(1)
+})
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const pkgRoot = path.resolve(__dirname, '..')
@@ -50,6 +60,25 @@ program
     cpSync(path.join(starterDir, 'pages'), pagesDir, { recursive: true })
     cpSync(path.join(starterDir, 'tuimon.config.ts'), configFile)
 
+    // Enable VSCode terminal image support
+    const vscodeDir = path.join(targetDir, '.vscode')
+    const vscodeSettings = path.join(vscodeDir, 'settings.json')
+    mkdirSync(vscodeDir, { recursive: true })
+
+    let settings: Record<string, unknown> = {}
+    if (existsSync(vscodeSettings)) {
+      try {
+        settings = JSON.parse(readFileSync(vscodeSettings, 'utf-8')) as Record<string, unknown>
+      } catch {
+        // malformed JSON — overwrite
+      }
+    }
+
+    if (!settings['terminal.integrated.enableImages']) {
+      settings['terminal.integrated.enableImages'] = true
+      writeFileSync(vscodeSettings, JSON.stringify(settings, null, 2) + '\n', 'utf-8')
+    }
+
     console.log('TuiMon project initialized!')
     console.log('')
     console.log('  Files created:')
@@ -57,6 +86,7 @@ program
     console.log('    pages/cpu-detail.html')
     console.log('    pages/memory-detail.html')
     console.log('    tuimon.config.ts')
+    console.log('    .vscode/settings.json  (terminal images enabled)')
     console.log('')
     console.log('  Next steps:')
     console.log('    npx tuimon start')
@@ -83,6 +113,15 @@ program
     } else {
       console.log('\u2717 No supported graphics protocol detected.')
       console.log('  TuiMon requires Kitty, iTerm2, or Sixel graphics support.')
+    }
+
+    // VSCode-specific hint
+    if (process.env['TERM_PROGRAM'] === 'vscode') {
+      console.log('')
+      console.log('  VSCode detected \u2014 make sure this setting is enabled:')
+      console.log('    "terminal.integrated.enableImages": true')
+      console.log('')
+      console.log('  Run "tuimon init" to configure this automatically.')
     }
 
     console.log('')

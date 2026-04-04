@@ -102,7 +102,9 @@ export function createRouter(deps: RouterDeps): RouterHandle {
   }
 
   function getPageHtml(pageId: string): string {
-    return pages[pageId]!.html
+    const page = pages[pageId]
+    if (!page) throw new Error(`[tuimon] Unknown page: "${pageId}"`)
+    return page.html
   }
 
   async function goToPage(pageState: PageState): Promise<void> {
@@ -152,13 +154,14 @@ export function createRouter(deps: RouterDeps): RouterHandle {
     // ── Check for F-key sequences ─────────────────────────────────────────
     const fkey = SEQ_TO_FKEY[key]
     if (fkey) {
-      const currentPageId =
-        state.type === 'overview' ? state.pageId : state.pageId
+      const currentPageId = state.pageId
       const binding = getPageKeys(currentPageId)[fkey]
       if (binding) {
-        Promise.resolve(binding.action()).catch((err) =>
+        try {
+          await Promise.resolve(binding.action())
+        } catch (err) {
           console.error('[tuimon]', err)
-        )
+        }
       }
       return
     }

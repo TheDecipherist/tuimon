@@ -17,8 +17,9 @@ export type FKeyMap = Partial<Record<FKey, KeyBinding>>
 // ─── Page config ─────────────────────────────────────────────────────────────
 
 export interface PageConfig {
-  /** Absolute or cwd-relative path to the HTML file for this page */
-  html: string
+  /** Absolute or cwd-relative path to the HTML file for this page.
+   *  Required unless `layout` is provided — layout pages generate HTML automatically. */
+  html: string // Set automatically if layout is provided
   /** If true, this is the starting page. Exactly one page must be default. */
   default?: boolean
   /**
@@ -36,6 +37,9 @@ export interface PageConfig {
    * and TuiMon will log a warning at startup.
    */
   keys?: FKeyMap
+  /** Declarative layout config — if provided, TuiMon generates the HTML automatically.
+   *  Cannot be used together with `html` on the same page. */
+  layout?: import('./layout/types.js').LayoutConfig
 }
 
 export type PageMap = Record<string, PageConfig>
@@ -113,6 +117,8 @@ export interface FKeyBarHandle {
   setKeys: (keys: FKeyMap) => void
   /** Show a temporary message in the bar for duration ms */
   notify: (message: string, duration?: number) => void
+  /** Force redraw the bar at current position */
+  redraw: () => void
   stop: () => void
 }
 

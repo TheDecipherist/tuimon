@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "Render beautiful HTML dashboards directly in your terminal.",
   "type": "module",
-  "bin": { "tuimon": "./dist/cli.js" },
+  "bin": {
+    "tuimon": "./dist/cli.js"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -13,7 +15,9 @@
     },
     "./client": "./client/tuimon-client.js"
   },
-  "engines": { "node": ">=20.0.0" },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -26,10 +30,10 @@
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
+    "chokidar": "^3.6.0",
     "commander": "^12.0.0",
     "playwright": "^1.44.0",
-    "sharp": "^0.33.0",
-    "chokidar": "^3.6.0"
+    "sharp": "^0.33.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -38,6 +42,7 @@
     "@vitest/coverage-v8": "^1.0.0",
     "eslint": "^8.0.0",
     "prettier": "^3.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.4.0",
     "vitest": "^1.0.0"
   }

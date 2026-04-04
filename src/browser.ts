@@ -17,8 +17,14 @@ export async function createBrowser({
   await page.setViewportSize({ width, height })
   await page.goto(url, { waitUntil: 'domcontentloaded' })
 
+  let crashCount = 0
   page.on('crash', async () => {
-    process.stderr.write('tuimon: page crashed, reloading\n')
+    crashCount++
+    if (crashCount > 3) {
+      process.stderr.write('[tuimon] page crashed repeatedly — giving up on reload\n')
+      return
+    }
+    process.stderr.write(`[tuimon] page crashed (attempt ${crashCount}/3), reloading\n`)
     try {
       await page.reload()
     } catch {
@@ -43,6 +49,14 @@ export async function createBrowser({
           ;(win['__tuimon_update__'] as (d: Record<string, unknown>) => void)(d)
         }
       }, data)
+      try {
+        await page.waitForFunction(
+          () => (globalThis as Record<string, unknown>)['__tuimon_ready__'] === true,
+          { timeout: 2000 },
+        )
+      } catch {
+        // timeout is acceptable — page may not have the client script yet
+      }
     },
 
     async navigate(newUrl: string): Promise<void> {

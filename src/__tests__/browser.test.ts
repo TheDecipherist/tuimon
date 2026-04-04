@@ -42,11 +42,12 @@ describe('createBrowser', () => {
     expect(await b.screenshot()).toBeInstanceOf(Buffer)
   })
 
-  it('pushData() calls page.evaluate', async () => {
+  it('pushData() calls page.evaluate and waitForFunction', async () => {
     const { createBrowser } = await import('../browser.js')
     const b = await createBrowser({ url: 'http://localhost:7337', width: 1600, height: 900 })
     await b.pushData({ cpu: 42 })
     expect(mockPage.evaluate).toHaveBeenCalledWith(expect.any(Function), { cpu: 42 })
+    expect(mockPage.waitForFunction).toHaveBeenCalledWith(expect.any(Function), { timeout: 2000 })
   })
 
   it('navigate() calls page.goto with new URL', async () => {

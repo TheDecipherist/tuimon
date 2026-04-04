@@ -10,10 +10,18 @@
 | Ghostty   | Kitty    | Supported  |
 | WezTerm   | Kitty    | Supported  |
 | iTerm2    | iTerm2   | Supported  |
-| VSCode    | Sixel    | Supported* |
+| VSCode    | Sixel    | Supported (requires setting) |
 | mlterm    | Sixel    | Supported  |
 
-\* Sixel support may vary by terminal version.
+### VSCode Setup
+
+VSCode supports terminal images but it's **off by default**. Running `tuimon init` enables it automatically by creating `.vscode/settings.json` with:
+
+```json
+{ "terminal.integrated.enableImages": true }
+```
+
+If you're adding TuiMon to an existing project, add that setting manually or run `tuimon init`.
 
 ## Quick Start
 
@@ -33,6 +41,46 @@ tuimon init && tuimon start
 ## How It Works
 
 TuiMon renders your HTML pages in a headless Chromium browser via Playwright, screenshots them as PNG, and streams the images to your terminal using the Kitty graphics protocol (or Sixel as fallback). You write dashboards as normal HTML/CSS/JS — any charting library works.
+
+## Zero-HTML Mode (Default Template)
+
+Don't want to write HTML? Use the built-in declarative dashboard — just define widgets and push data:
+
+```typescript
+const dash = await tuimon.start({
+  pages: {
+    overview: {
+      default: true,
+      layout: {
+        title: 'My App',
+        stats: [
+          { id: 'users', label: 'Users Online', type: 'stat' },
+          { id: 'cpu', label: 'CPU', type: 'gauge' },
+        ],
+        panels: [
+          { id: 'traffic', label: 'Traffic', type: 'line', span: 2 },
+          { id: 'services', label: 'Services', type: 'doughnut' },
+          { id: 'events', label: 'Events', type: 'event-log' },
+          { id: 'health', label: 'Health', type: 'status-grid' },
+        ],
+      },
+    },
+  },
+  refresh: 1000,
+  data: () => ({
+    users: getOnlineCount(),        // just a number
+    cpu: getCpuPercent(),            // just a number (0-100)
+    traffic: { Requests: 340, Errors: 12 },  // keys = series
+    services: { Web: 47, API: 27 },          // keys = slices
+    events: ['Deploy completed'],             // auto-timestamped
+    health: ['Node-1', 'Node-2'],             // all assumed "ok"
+  }),
+})
+```
+
+**Widget types:** `stat`, `gauge`, `line`, `doughnut`, `bar`, `event-log`, `status-grid`
+
+Every widget accepts a **lazy format** (just numbers/strings) or a **detailed format** (full control). Line charts accumulate history automatically — just send current values.
 
 ## Multi-Page Navigation
 

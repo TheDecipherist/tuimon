@@ -1,0 +1,15 @@
+src/
+src/__tests__/
+.mdd/
+.claude/
+MDs/
+_ai_temp/
+docs/
+.env
+.env.*
+*.tsbuildinfo
+coverage/
+vitest.config.ts
+.prettierrc
+.eslintrc.json
+.gitignore

@@ -5,14 +5,19 @@ export function startKeyHandler({ onKey }: { onKey: (key: string) => void }): Ke
     onKey(buffer.toString())
   }
 
-  process.stdin.setRawMode(true)
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(true)
+  }
   process.stdin.resume()
   process.stdin.on('data', onData)
 
   return {
     stop(): void {
       process.stdin.removeListener('data', onData)
-      process.stdin.setRawMode(false)
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false)
+      }
+      process.stdin.pause()
     },
   }
 }

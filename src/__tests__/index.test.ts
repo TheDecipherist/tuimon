@@ -24,7 +24,7 @@ const mockBrowser = {
 vi.mock('../browser.js', () => ({ createBrowser: vi.fn().mockResolvedValue(mockBrowser) }))
 vi.mock('../encoder.js', () => ({ encodeAndRender: vi.fn().mockResolvedValue(undefined) }))
 vi.mock('../keyhandler.js', () => ({ startKeyHandler: vi.fn().mockReturnValue({ stop: vi.fn() }) }))
-vi.mock('../fkeybar.js', () => ({ renderFKeyBar: vi.fn().mockReturnValue({ setKeys: vi.fn(), notify: vi.fn(), stop: vi.fn() }) }))
+vi.mock('../fkeybar.js', () => ({ renderFKeyBar: vi.fn().mockReturnValue({ setKeys: vi.fn(), notify: vi.fn(), redraw: vi.fn(), stop: vi.fn() }) }))
 vi.mock('../router.js', () => ({
   createRouter: vi.fn().mockReturnValue({
     handleKey: vi.fn().mockResolvedValue(undefined),

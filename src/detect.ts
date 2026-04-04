@@ -28,6 +28,8 @@ function detectSixelEnv(): boolean {
 
 // ─── Terminal query helpers ──────────────────────────────────────────────────
 
+let queryLock: Promise<unknown> = Promise.resolve()
+
 function queryKittySupport(): Promise<boolean> {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
@@ -110,9 +112,12 @@ export async function detectGraphicsSupport(
   const iterm2 = detectIterm2Env()
   const sixel = detectSixelEnv()
 
-  // If not skipping queries and env didn't detect kitty, try querying
+  // If not skipping queries and env didn't detect kitty, try querying (serialized)
   if (!skipQuery && !kitty) {
-    kitty = await queryKittySupport()
+    await queryLock
+    const p = queryKittySupport()
+    queryLock = p.catch(() => {})
+    kitty = await p
   }
 
   // Determine protocol with priority: kitty > iterm2 > sixel
@@ -140,7 +145,10 @@ export async function getTerminalDimensions(
   let pixelHeight = 900
 
   if (!skipQuery) {
-    const queried = await queryPixelDimensions()
+    await queryLock
+    const p = queryPixelDimensions()
+    queryLock = p.catch(() => {})
+    const queried = await p
     if (queried) {
       pixelWidth = queried.width
       pixelHeight = queried.height

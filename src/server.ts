@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
-import { readFileSync, existsSync } from 'node:fs'
-import { join, extname } from 'node:path'
+import { readFileSync, existsSync, statSync } from 'node:fs'
+import { join, extname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Socket } from 'node:net'
 import type { ServerHandle } from './types.js'
@@ -45,7 +45,7 @@ function serveFile(
   filePath: string,
   transform?: (content: string) => string,
 ): void {
-  if (!existsSync(filePath)) {
+  if (!existsSync(filePath) || statSync(filePath).isDirectory()) {
     res.writeHead(404, { 'Content-Type': 'text/plain', Connection: 'close' })
     res.end('Not Found')
     return
@@ -69,7 +69,14 @@ function serveFile(
 function createHandler(rootDir: string) {
   return (req: IncomingMessage, res: ServerResponse) => {
     const url = req.url ?? '/'
-    const pathname = decodeURIComponent(url.split('?')[0] ?? '/')
+    let pathname: string
+    try {
+      pathname = decodeURIComponent(url.split('?')[0] ?? '/')
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'text/plain' })
+      res.end('Bad Request')
+      return
+    }
 
     // Internal tuimon routes
     if (pathname === '/tuimon/client.js') {
@@ -84,10 +91,11 @@ function createHandler(rootDir: string) {
 
     // Serve from rootDir
     const safePath = pathname.startsWith('/') ? pathname.slice(1) : pathname
-    const filePath = join(rootDir, safePath)
+    const filePath = resolve(rootDir, safePath)
 
-    // Prevent path traversal
-    if (!filePath.startsWith(rootDir)) {
+    // Prevent path traversal — ensure resolved path is within rootDir
+    const normalizedRoot = rootDir.endsWith(sep) ? rootDir : rootDir + sep
+    if (!filePath.startsWith(normalizedRoot) && filePath !== rootDir) {
       res.writeHead(403, { 'Content-Type': 'text/plain' })
       res.end('Forbidden')
       return

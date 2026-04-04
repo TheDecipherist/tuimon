@@ -1,9 +1,10 @@
 import path from 'node:path'
+import { mkdirSync, writeFileSync, rmSync, readdirSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import type {
   TuiMonOptions,
   TuiMonDashboard,
   FKeyMap,
-  PageState,
 } from './types.js'
 import { detectGraphicsSupport, getTerminalDimensions } from './detect.js'
 import { startServer } from './server.js'
@@ -12,10 +13,19 @@ import { encodeAndRender } from './encoder.js'
 import { startKeyHandler } from './keyhandler.js'
 import { renderFKeyBar } from './fkeybar.js'
 import { createRouter } from './router.js'
+import { generateDashboardHtml } from './layout/generator.js'
+
+const MAX_REFRESH_FAILURES = 5
 
 async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
   const { pages } = options
   const renderDelay = options.renderDelay ?? 50
+
+  // Validate pages is not empty
+  const pageEntries = Object.entries(pages)
+  if (pageEntries.length === 0) {
+    throw new Error('[tuimon] At least one page must be defined')
+  }
 
   // Detect terminal capabilities
   const graphics = await detectGraphicsSupport()
@@ -28,11 +38,42 @@ async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
   // iterm2 uses kitty-compatible rendering for our purposes
   const protocol: 'kitty' | 'sixel' = (graphics.protocol === 'sixel') ? 'sixel' : 'kitty'
 
+  // Clean up stale temp dirs from previous crashed runs
+  try {
+    const tmp = tmpdir()
+    for (const entry of readdirSync(tmp)) {
+      if (entry.startsWith('tuimon-layout-')) {
+        const pid = entry.split('-').pop()
+        // Check if process is still running — if not, it's orphaned
+        try { if (pid) process.kill(Number(pid), 0) } catch {
+          try { rmSync(path.join(tmp, entry), { recursive: true, force: true }) } catch {}
+        }
+      }
+    }
+  } catch {}
+
+  // Generate HTML for layout-based pages
+  const layoutTmpDir = path.join(tmpdir(), `tuimon-layout-${process.pid}`)
+  let layoutTmpCreated = false
+
+  for (const [id, page] of pageEntries) {
+    if (page.layout && !page.html) {
+      if (!layoutTmpCreated) {
+        mkdirSync(layoutTmpDir, { recursive: true })
+        layoutTmpCreated = true
+      }
+      const html = generateDashboardHtml(page.layout)
+      const htmlPath = path.join(layoutTmpDir, `${id}.html`)
+      writeFileSync(htmlPath, html, 'utf-8')
+      page.html = htmlPath
+    }
+  }
+
   // Resolve all page html paths and find common root
   const resolvedPages = new Map<string, string>()
   const allDirs: string[] = []
 
-  for (const [id, page] of Object.entries(pages)) {
+  for (const [id, page] of pageEntries) {
     const resolved = path.resolve(process.cwd(), page.html)
     resolvedPages.set(id, resolved)
     allDirs.push(path.dirname(resolved))
@@ -61,9 +102,15 @@ async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
   const viewportHeight = dims.pixelHeight - cellPixelHeight
   const viewportWidth = dims.pixelWidth
 
-  // Start browser
+  // Resolve default page URL for initial navigation
+  const defaultPageId = pageEntries.find(([, p]) => p.default)?.[0] ?? pageEntries[0]![0]
+  const defaultPage = pages[defaultPageId]!
+  const defaultFilename = path.basename(path.resolve(process.cwd(), defaultPage.html))
+  const defaultPageUrl = server.urlFor(defaultFilename)
+
+  // Start browser — navigate directly to the default page
   const browser = await createBrowser({
-    url: server.url,
+    url: defaultPageUrl,
     width: viewportWidth,
     height: viewportHeight,
   })
@@ -75,26 +122,91 @@ async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
   let lastData: Record<string, unknown> = {}
   let refreshInterval: ReturnType<typeof setInterval> | undefined
   let stopped = false
+  let rendering = false
 
-  // Render function
-  async function renderFrame(data?: Record<string, unknown>): Promise<void> {
+  // Handle terminal resize — pause rendering during resize, redraw when settled
+  const cellPixelWidth = Math.floor(dims.pixelWidth / dims.cols)
+  let resizing = false
+  let resizeTimer: ReturnType<typeof setTimeout> | undefined
+  const onTermResize = (): void => {
     if (stopped) return
-    if (data) lastData = data
-    await browser.pushData(lastData)
-    await new Promise((resolve) => setTimeout(resolve, renderDelay))
-    const screenshot = await browser.screenshot()
-    await encodeAndRender(screenshot, { protocol })
+    resizing = true // pause frame rendering
+    if (resizeTimer) clearTimeout(resizeTimer)
+    resizeTimer = setTimeout(() => {
+      const cols = process.stdout.columns || 80
+      const rows = process.stdout.rows || 24
+      const newW = Math.max(320, cols * cellPixelWidth)
+      const newH = Math.max(200, (rows - 1) * cellPixelHeight)
+      process.stdout.write('\x1b[2J\x1b[H')
+      browser.resize(newW, newH)
+        .then(() => {
+          resizing = false
+          return renderFrame()
+        })
+        .then(() => { fkeyBar.redraw() })
+        .catch((err) => {
+          resizing = false
+          console.error('[tuimon] resize error:', err)
+        })
+    }, 300)
+  }
+  process.stdout.on('resize', onTermResize)
+
+  // Render function with concurrency guard + timeout safety
+  const debug = !!process.env['TUIMON_DEBUG']
+  let renderTimeout: ReturnType<typeof setTimeout> | undefined
+  async function renderFrame(data?: Record<string, unknown>): Promise<void> {
+    if (stopped || rendering || resizing) return
+    rendering = true
+    // Safety: force-unlock rendering after 5s in case it hangs
+    renderTimeout = setTimeout(() => { rendering = false }, 5000)
+    const t0 = performance.now()
+    try {
+      if (data) lastData = data
+
+      const t1 = performance.now()
+      await browser.pushData(lastData)
+      const t2 = performance.now()
+
+      await new Promise((resolve) => setTimeout(resolve, renderDelay))
+      const t3 = performance.now()
+
+      const screenshot = await browser.screenshot()
+      const t4 = performance.now()
+
+      await encodeAndRender(screenshot, { protocol })
+      const t5 = performance.now()
+
+      // Always redraw F-key bar after frame — image may have overwritten it
+      fkeyBar.redraw()
+
+      if (debug) {
+        const total = (t5 - t0).toFixed(0)
+        const push = (t2 - t1).toFixed(0)
+        const wait = (t3 - t2).toFixed(0)
+        const snap = (t4 - t3).toFixed(0)
+        const encode = (t5 - t4).toFixed(0)
+        const size = (screenshot.length / 1024).toFixed(0)
+        process.stderr.write(
+          `[tuimon] frame ${total}ms | push:${push} wait:${wait} snap:${snap} encode:${encode} | ${size}KB\n`
+        )
+      }
+    } finally {
+      if (renderTimeout) clearTimeout(renderTimeout)
+      rendering = false
+    }
   }
 
   // F-key bar
-  const defaultPageId = Object.entries(pages).find(([, p]) => p.default)?.[0] ?? Object.keys(pages)[0]!
-  const defaultPage = pages[defaultPageId]!
   const fkeyBar = renderFKeyBar({ keys: defaultPage.keys ?? {} })
 
-  // Router navigate helper — uses relative paths from rootDir
+  // Router navigate helper
   async function navigateToPage(htmlPath: string): Promise<void> {
-    const filename = path.basename(htmlPath)
-    const url = server.urlFor(filename)
+    // Internal paths (e.g., /tuimon/confirm-quit.html) are served as-is
+    // Page paths are resolved to their filename
+    const url = htmlPath.startsWith('/tuimon/')
+      ? `${server.url}${htmlPath}`
+      : server.urlFor(path.basename(htmlPath))
     await browser.navigate(url)
   }
 
@@ -107,28 +219,43 @@ async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
     confirmQuitHtml: '/tuimon/confirm-quit.html',
   })
 
-  // Key handler
+  // Key handler — intercept Ctrl+C for emergency exit, forward rest to router
   const keyHandler = startKeyHandler({
-    onKey: (key: string) => { void router.handleKey(key) },
+    onKey: (key: string) => {
+      // Ctrl+C: synchronous emergency cleanup and exit
+      if (key === '\x03') {
+        keyHandler.stop()
+        fkeyBar.stop()
+        process.stdout.write('\x1b[?25h\x1b[?1049l')
+        process.exit(0)
+        return
+      }
+      router.handleKey(key).catch((err) => {
+        console.error('[tuimon] key handler error:', err)
+      })
+    },
   })
 
-  // Auto-refresh
+  // Auto-refresh with circuit breaker
   if (options.refresh && options.data) {
     const dataFn = options.data
+    let consecutiveFailures = 0
     refreshInterval = setInterval(async () => {
       try {
         const data = await dataFn()
         await renderFrame(data)
+        consecutiveFailures = 0
       } catch (err) {
+        consecutiveFailures++
         console.error('[tuimon] refresh error:', err)
+        if (consecutiveFailures >= MAX_REFRESH_FAILURES) {
+          console.error(`[tuimon] ${MAX_REFRESH_FAILURES} consecutive refresh failures — disabling auto-refresh`)
+          if (refreshInterval) clearInterval(refreshInterval)
+        }
       }
     }, options.refresh)
+    refreshInterval.unref()
   }
-
-  // Navigate to the default page
-  const defaultHtml = defaultPage.html
-  const defaultFilename = path.basename(path.resolve(process.cwd(), defaultHtml))
-  await browser.navigate(server.urlFor(defaultFilename))
 
   // Stop function
   async function stop(): Promise<void> {
@@ -136,16 +263,32 @@ async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
     stopped = true
 
     if (refreshInterval) clearInterval(refreshInterval)
+    if (resizeTimer) clearTimeout(resizeTimer)
+    process.stdout.removeListener('resize', onTermResize)
     keyHandler.stop()
     fkeyBar.stop()
     await browser.close()
     await server.close()
 
+    // Clean up temp layout files
+    if (layoutTmpCreated) {
+      try { rmSync(layoutTmpDir, { recursive: true, force: true }) } catch {}
+    }
+
     // Restore terminal: show cursor + exit alt screen
     process.stdout.write('\x1b[?25h\x1b[?1049l')
   }
 
-  process.once('SIGINT', () => { void stop() })
+  // Ensure cleanup on any exit path
+  const onShutdown = () => {
+    // Force exit after 3s if graceful stop hangs
+    const forceTimer = setTimeout(() => { process.exit(1) }, 3000)
+    forceTimer.unref()
+    stop().catch(() => { process.exit(1) })
+  }
+  process.once('SIGINT', onShutdown)
+  process.once('SIGTERM', onShutdown)
+  process.once('beforeExit', () => { void stop() })
 
   return {
     render: async (data: Record<string, unknown>) => { await renderFrame(data) },

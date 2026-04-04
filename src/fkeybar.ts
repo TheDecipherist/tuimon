@@ -18,14 +18,6 @@ function buildBar(keys: FKeyMap, cols: number): string {
     segments.push(`${CYAN}${fk}${WHITE} ${binding.label}`)
   }
 
-  const plain = segments
-    .map((_, i) => {
-      const fk = ALL_FKEYS.find((k) => keys[k as FKey])
-      // recalculate without ansi for length
-      return ''
-    })
-    .join('')
-
   // Build the full rendered line
   let rendered = segments.join('  ')
 
@@ -59,12 +51,25 @@ function renderLine(content: string, rows: number): void {
 export function renderFKeyBar({ keys }: { keys: FKeyMap }): FKeyBarHandle {
   let currentKeys = keys
   let notifyTimer: ReturnType<typeof setTimeout> | null = null
+  let lastRow = 0
 
   process.stdout.write(HIDE_CURSOR)
+
+  function clearRow(row: number): void {
+    const cols = process.stdout.columns || 80
+    process.stdout.write(`\x1b[${row};0H${' '.repeat(cols)}`)
+  }
 
   function draw(): void {
     const cols = process.stdout.columns || 80
     const rows = process.stdout.rows || 24
+
+    // Clear the old bar position if it moved
+    if (lastRow > 0 && lastRow !== rows) {
+      clearRow(lastRow)
+    }
+    lastRow = rows
+
     const bar = buildBar(currentKeys, cols)
     renderLine(bar, rows)
   }
@@ -99,6 +104,10 @@ export function renderFKeyBar({ keys }: { keys: FKeyMap }): FKeyBarHandle {
         notifyTimer = null
         draw()
       }, duration)
+    },
+
+    redraw(): void {
+      draw()
     },
 
     stop(): void {
