@@ -208,4 +208,19 @@ program
     process.exit(support.protocol ? 0 : 1)
   })
 
+// ─── AI command ──────────────────────────────────────────────────────────────
+
+program
+  .command('ai')
+  .description('Print AI integration guide (for LLMs to learn how to use TuiMon)')
+  .action(() => {
+    const aiMdPath = path.resolve(pkgRoot, 'AI.md')
+    if (existsSync(aiMdPath)) {
+      console.log(readFileSync(aiMdPath, 'utf-8'))
+    } else {
+      console.error('[tuimon] AI.md not found in package')
+      process.exit(1)
+    }
+  })
+
 program.parse()
