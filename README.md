@@ -1,6 +1,6 @@
 # TuiMon
 
-![TuiMon — HTML dashboards rendered in your terminal](docs/images/hero.webp)
+![TuiMon — HTML dashboards rendered in your terminal](https://raw.githubusercontent.com/TheDecipherist/tuimon/main/docs/images/hero.webp)
 
 **[View the full documentation site](https://thedecipherist.github.io/tuimon/)**
 
