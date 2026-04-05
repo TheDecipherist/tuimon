@@ -53,7 +53,7 @@ export interface TuiMonOptions {
    * Data function called before each render.
    * Result is passed into the page via TuiMon.onUpdate().
    */
-  data?: () => Record<string, unknown> | Promise<Record<string, unknown>>
+  data?: (() => Record<string, unknown> | Promise<Record<string, unknown>>) | undefined
   /**
    * Auto-render interval in ms. Requires data to be set.
    * Default: no auto-render — developer calls dash.render() manually.

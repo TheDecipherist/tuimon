@@ -2,6 +2,9 @@ import type { PresetResult } from './types.js'
 import tuimon from '../../index.js'
 
 export async function runPreset(preset: PresetResult): Promise<void> {
+  // Get initial data before starting the dashboard
+  const initialData = await Promise.resolve(preset.data())
+
   const dash = await tuimon.start({
     pages: {
       main: {
@@ -15,7 +18,10 @@ export async function runPreset(preset: PresetResult): Promise<void> {
       },
     },
     refresh: preset.refresh,
-    data: preset.data,
+    data: preset.refresh ? preset.data : undefined,
     renderDelay: 0,
   })
+
+  // Always do an initial render
+  await dash.render(initialData)
 }
