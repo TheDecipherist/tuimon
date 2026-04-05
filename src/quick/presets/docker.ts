@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { execSync, spawn } from 'node:child_process'
 import type { LayoutConfig } from '../../layout/types.js'
 import type { PresetResult } from './types.js'
 
@@ -19,33 +19,54 @@ function parsePercent(value: string): number {
   return parseFloat(value.replace('%', '')) || 0
 }
 
-function execCommand(cmd: string): string {
-  try {
-    return execSync(cmd, { encoding: 'utf-8', timeout: 10_000 })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    if (msg.includes('ENOENT') || msg.includes('not found') || msg.includes('command not found')) {
-      throw new Error('[tuimon] Docker not found. Make sure Docker is installed and running.')
-    }
-    throw err
-  }
-}
-
-function parseJsonLines<T>(output: string): T[] {
-  return output
-    .trim()
-    .split('\n')
-    .filter((line) => line.trim() !== '')
-    .map((line) => JSON.parse(line) as T)
-}
-
 export function dockerPreset(): PresetResult {
-  // Verify docker is available on init
+  // Verify docker is available
   try {
     execSync('docker --version', { encoding: 'utf-8', stdio: 'pipe' })
   } catch {
     throw new Error('[tuimon] Docker not found. Make sure Docker is installed and running.')
   }
+
+  // Cache for latest stats from streaming docker stats
+  let latestStats: DockerStatsEntry[] = []
+  let statsReady = false
+
+  // Spawn streaming docker stats process
+  const statsProc = spawn('docker', [
+    'stats', '--format', '{{json .}}',
+  ], { stdio: ['ignore', 'pipe', 'ignore'] })
+
+  let lineBuf = ''
+  statsProc.stdout.on('data', (chunk: Buffer) => {
+    lineBuf += chunk.toString()
+    // docker stats outputs a batch of lines (one per container) then a blank separator
+    const lines = lineBuf.split('\n')
+    const batch: DockerStatsEntry[] = []
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed) {
+        // End of batch - update cache
+        if (batch.length > 0) {
+          latestStats = batch.slice()
+          statsReady = true
+        }
+        continue
+      }
+      try {
+        batch.push(JSON.parse(trimmed) as DockerStatsEntry)
+      } catch {
+        // skip unparseable lines (ANSI clear sequences from docker)
+      }
+    }
+    // Keep the last incomplete line in buffer
+    lineBuf = lines[lines.length - 1] ?? ''
+  })
+
+  // Clean up on exit
+  process.once('beforeExit', () => { statsProc.kill() })
+  process.once('SIGINT', () => { statsProc.kill() })
+  process.once('SIGTERM', () => { statsProc.kill() })
 
   const layout: LayoutConfig = {
     title: 'Docker',
@@ -64,12 +85,24 @@ export function dockerPreset(): PresetResult {
   }
 
   const data = (): Record<string, unknown> => {
-    const statsOutput = execCommand("docker stats --no-stream --format '{{json .}}'")
-    const statsEntries = parseJsonLines<DockerStatsEntry>(statsOutput)
+    // Get container list (fast, ~50ms)
+    let psEntries: DockerPsEntry[] = []
+    try {
+      const psOutput = execSync("docker ps --format '{{json .}}'", {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })
+      psEntries = psOutput
+        .trim()
+        .split('\n')
+        .filter((l) => l.trim())
+        .map((l) => JSON.parse(l) as DockerPsEntry)
+    } catch {
+      // use empty if docker ps fails
+    }
 
-    const psOutput = execCommand("docker ps --format '{{json .}}'")
-    const psEntries = parseJsonLines<DockerPsEntry>(psOutput)
-
+    const statsEntries = latestStats
     const totalContainers = psEntries.length
     const runningCount = psEntries.filter((c) => c.State === 'running').length
 
@@ -94,23 +127,6 @@ export function dockerPreset(): PresetResult {
       memUsage[entry.Name] = parsePercent(entry.MemPerc)
     }
 
-    let events: Array<{ text: string; type: 'info' | 'warning' | 'error' }> = []
-    try {
-      const eventsOutput = execCommand("docker events --since 60s --until 0s --format '{{json .}}'")
-      const lines = eventsOutput
-        .trim()
-        .split('\n')
-        .filter((line) => line.trim() !== '')
-      events = lines.map((line) => {
-        const parsed = JSON.parse(line) as { Action?: string; Actor?: { Attributes?: { name?: string } } }
-        const name = parsed.Actor?.Attributes?.name ?? 'unknown'
-        const action = parsed.Action ?? 'unknown'
-        return { text: `${name}: ${action}`, type: 'info' as const }
-      })
-    } catch {
-      events = []
-    }
-
     return {
       containers: totalContainers,
       running: runningCount,
@@ -119,7 +135,7 @@ export function dockerPreset(): PresetResult {
       cpuHistory,
       health,
       memUsage,
-      events,
+      events: statsReady ? [] : [{ text: 'Waiting for docker stats...', type: 'info' as const }],
     }
   }
 
