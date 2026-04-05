@@ -208,6 +208,70 @@ program
     process.exit(support.protocol ? 0 : 1)
   })
 
+// ─── DB command ──────────────────────────────────────────────────────────────
+
+program
+  .command('db <target>')
+  .description('View a database table/collection or run a query')
+  .option('--uri <uri>', 'Database connection URI')
+  .option('--env <var>', 'Env variable name for connection string')
+  .option('--query <json>', 'MongoDB query filter (JSON)')
+  .option('--sort <json>', 'MongoDB sort (JSON)')
+  .option('--limit <n>', 'Row limit', '100')
+  .option('--watch', 'Re-query on interval')
+  .option('--interval <ms>', 'Watch interval in ms', '2000')
+  .option('-c, --columns <cols>', 'Comma-separated columns to display')
+  .action(async (target: string, opts: {
+    uri?: string; env?: string; query?: string; sort?: string
+    limit: string; watch?: boolean; interval: string; columns?: string
+  }) => {
+    const { startDbMode } = await import('./quick/db-mode.js')
+    await startDbMode({
+      target,
+      uri: opts.uri,
+      envVarName: opts.env,
+      query: opts.query,
+      sort: opts.sort,
+      limit: parseInt(opts.limit, 10),
+      watch: opts.watch,
+      interval: parseInt(opts.interval, 10),
+      columns: opts.columns ? opts.columns.split(',').map((c) => c.trim()).filter(Boolean) : undefined,
+    })
+  })
+
+// ─── Config command ──────────────────────────────────────────────────────────
+
+program
+  .command('config [key] [value]')
+  .description('View or set TuiMon configuration')
+  .option('--reset', 'Reset config to defaults')
+  .action(async (key: string | undefined, value: string | undefined, opts: { reset?: boolean }) => {
+    const { loadConfig, saveConfig, resetConfig, printConfig, getConfigValue, setConfigValue } = await import('./config.js')
+
+    if (opts.reset) {
+      resetConfig()
+      console.log('[tuimon] Config reset to defaults.')
+      return
+    }
+
+    const config = loadConfig()
+
+    if (!key) {
+      printConfig(config)
+      return
+    }
+
+    if (!value) {
+      const val = getConfigValue(config, key)
+      console.log(val === null ? '(not set)' : String(val))
+      return
+    }
+
+    const updated = setConfigValue(config, key, value)
+    saveConfig(updated)
+    console.log(`[tuimon] Set ${key} = ${value}`)
+  })
+
 // ─── AI command ──────────────────────────────────────────────────────────────
 
 program
