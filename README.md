@@ -2,6 +2,8 @@
 
 ![TuiMon — HTML dashboards rendered in your terminal](docs/images/hero.webp)
 
+**[View the full documentation site](https://thedecipherist.github.io/tuimon/)**
+
 > Your HTML, CSS, and JavaScript, rendered directly in the terminal.
 
 ## What Is TuiMon?
