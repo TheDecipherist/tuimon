@@ -95,17 +95,20 @@ header nav ul {
   font-weight: 500;
 }
 
-header nav ul:last-child a {
-  color: var(--text-secondary);
-  text-decoration: none;
+header nav ul:last-child a,
+header nav ul:last-child a:visited {
+  color: var(--text-secondary) !important;
+  text-decoration: none !important;
   font-weight: 500;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   transition: all 0.2s ease;
+  -webkit-text-fill-color: var(--text-secondary);
 }
 
 header nav ul:last-child a:hover {
-  color: var(--text-primary);
+  color: var(--text-primary) !important;
+  -webkit-text-fill-color: var(--text-primary);
   background: var(--bg-tertiary);
 }
 
