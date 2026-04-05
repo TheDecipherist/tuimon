@@ -104,8 +104,7 @@ export function dockerPreset(): PresetResult {
     ],
     panels: [
       { id: 'cpuHistory', label: 'CPU % per Container', type: 'line', span: 2 },
-      { id: 'health', label: 'Container Status', type: 'status-grid' },
-      { id: 'memUsage', label: 'Memory Usage', type: 'bar' },
+      { id: 'memHistory', label: 'Memory (MB) per Container', type: 'line', span: 2 },
       { id: 'containerTable', label: 'Container Details', type: 'table', span: 2 },
     ],
   }
@@ -136,16 +135,11 @@ export function dockerPreset(): PresetResult {
     const totalMemMB = statsEntries.reduce((sum, e) => sum + parseMemToMB(e.MemUsage), 0)
 
     const cpuHistory: Record<string, number> = {}
-    const memUsage: Record<string, number> = {}
+    const memHistory: Record<string, number> = {}
     for (const entry of statsEntries) {
       cpuHistory[entry.Name] = parsePercent(entry.CPUPerc)
-      memUsage[entry.Name] = parseMemToMB(entry.MemUsage)
+      memHistory[entry.Name] = parseMemToMB(entry.MemUsage)
     }
-
-    const health = psEntries.map((c) => ({
-      label: c.Names,
-      status: c.State === 'running' ? 'ok' as const : c.State === 'exited' ? 'error' as const : 'warn' as const,
-    }))
 
     // Full container details table
     const containerTable = {
@@ -167,11 +161,109 @@ export function dockerPreset(): PresetResult {
       totalCpu: { value: totalCpu.toFixed(2) + '%', trend: statsEntries.length > 0 ? `${statsEntries.length} containers` : '' },
       totalMem: { value: totalMemMB > 1024 ? (totalMemMB / 1024).toFixed(1) + ' GB' : totalMemMB + ' MB' },
       cpuHistory,
-      health,
-      memUsage,
+      memHistory,
       containerTable,
     }
   }
 
   return { layout, data, refresh: 1000 }
+}
+
+// ─── Full docker preset with logs page ───────────────────────────────────────
+
+export async function startDockerPreset(): Promise<void> {
+  const preset = dockerPreset()
+  const initialData = await Promise.resolve(preset.data())
+
+  // Import tuimon lazily
+  const tuimon = (await import('../../index.js')).default
+
+  // Get container names for docker logs
+  function getContainerNames(): string[] {
+    try {
+      const output = execSync("docker ps --format '{{.Names}}'", {
+        encoding: 'utf-8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'],
+      })
+      return output.trim().split('\n').filter((n) => n.trim())
+    } catch { return [] }
+  }
+
+  // Get recent logs from all containers
+  function getDockerLogs(): Record<string, unknown> {
+    const names = getContainerNames()
+    const allLogs: Array<{ text: string; type: 'info' | 'warning' | 'error'; time: string }> = []
+
+    for (const name of names) {
+      try {
+        const output = execSync(`docker logs --tail 50 --timestamps ${name} 2>&1`, {
+          encoding: 'utf-8', timeout: 5000, stdio: ['ignore', 'pipe', 'pipe'],
+        })
+        const lines = output.trim().split('\n').filter((l) => l.trim())
+        for (const line of lines) {
+          // Timestamp is the first token (ISO format from --timestamps)
+          const spaceIdx = line.indexOf(' ')
+          const ts = spaceIdx > 0 ? line.slice(0, spaceIdx) : ''
+          const msg = spaceIdx > 0 ? line.slice(spaceIdx + 1) : line
+          const type = msg.toLowerCase().includes('error') || msg.toLowerCase().includes('fatal')
+            ? 'error' as const
+            : msg.toLowerCase().includes('warn')
+            ? 'warning' as const
+            : 'info' as const
+          const shortTime = ts.slice(11, 19) // HH:MM:SS from ISO
+          allLogs.push({ text: `[${name}] ${msg}`, type, time: shortTime })
+        }
+      } catch {
+        // skip containers that fail
+      }
+    }
+
+    // Sort by time descending, take last 100
+    allLogs.sort((a, b) => b.time.localeCompare(a.time))
+
+    return {
+      _dockerLogs: allLogs.slice(0, 100),
+    }
+  }
+
+  const logsLayout: import('../../layout/types.js').LayoutConfig = {
+    title: 'Docker Logs',
+    panels: [
+      { id: '_dockerLogs', label: 'Container Logs', type: 'event-log', span: 2 },
+    ],
+  }
+
+  const dash = await tuimon.start({
+    pages: {
+      overview: {
+        html: '',
+        default: true,
+        label: 'Overview',
+        layout: preset.layout,
+        keys: {
+          F5: { label: 'Refresh', action: async () => { await dash.render(await Promise.resolve(preset.data())) } },
+          F3: { label: 'Logs [L]', action: () => {} },
+          F10: { label: 'Quit', action: () => { process.exit(0) } },
+        },
+      },
+      logs: {
+        html: '',
+        shortcut: 'l',
+        label: 'Logs',
+        layout: logsLayout,
+        keys: {
+          F5: { label: 'Refresh', action: async () => { await dash.render(getDockerLogs()) } },
+          F10: { label: 'Quit', action: () => { process.exit(0) } },
+        },
+      },
+    },
+    refresh: preset.refresh,
+    data: async () => {
+      const d = await Promise.resolve(preset.data())
+      // Merge logs data so it's available when switching pages
+      return { ...d, ...getDockerLogs() }
+    },
+    renderDelay: 0,
+  })
+
+  await dash.render({ ...initialData, ...getDockerLogs() })
 }

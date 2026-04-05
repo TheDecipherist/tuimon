@@ -140,9 +140,8 @@ program
   .command('docker')
   .description('Live Docker container dashboard')
   .action(async () => {
-    const { dockerPreset } = await import('./quick/presets/docker.js')
-    const { runPreset } = await import('./quick/presets/runner.js')
-    await runPreset(dockerPreset())
+    const { startDockerPreset } = await import('./quick/presets/docker.js')
+    await startDockerPreset()
   })
 
 program
