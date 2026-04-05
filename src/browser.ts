@@ -10,7 +10,10 @@ export async function createBrowser({
   width: number
   height: number
 }): Promise<BrowserHandle> {
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({
+    headless: true,
+    timeout: 30000,
+  })
   const context = await browser.newContext()
   const page = await context.newPage()
 

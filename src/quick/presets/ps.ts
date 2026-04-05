@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import type { LayoutConfig } from '../../layout/types.js'
 import type { PresetResult } from './types.js'
 
@@ -24,7 +25,6 @@ function execCommand(cmd: string): string {
 
 function readFile(path: string): string | undefined {
   try {
-    const { readFileSync } = require('node:fs') as typeof import('node:fs')
     return readFileSync(path, 'utf-8')
   } catch {
     return undefined

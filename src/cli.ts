@@ -24,7 +24,7 @@ const program = new Command()
 program
   .name('tuimon')
   .description('Render beautiful HTML dashboards directly in your terminal.')
-  .version('0.1.0')
+  .version('0.3.0')
 
 // ─── Default command: tuimon <file> ──────────────────────────────────────────
 
@@ -251,10 +251,22 @@ program
 
     if (process.env['TERM_PROGRAM'] === 'vscode') {
       console.log('')
-      console.log('  VSCode detected \u2014 make sure this setting is enabled:')
+      console.log('  VSCode detected. Make sure this setting is enabled:')
       console.log('    "terminal.integrated.enableImages": true')
       console.log('')
       console.log('  Run "tuimon init" to configure this automatically.')
+    }
+
+    // Check if Playwright browser is installed
+    console.log('')
+    try {
+      const { chromium } = await import('playwright')
+      const browser = await chromium.launch({ headless: true, timeout: 10000 })
+      await browser.close()
+      console.log('\u2713 Chromium browser: installed')
+    } catch {
+      console.log('\u2717 Chromium browser: not found')
+      console.log('  Run: npx playwright install chromium')
     }
 
     console.log('')

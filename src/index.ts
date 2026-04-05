@@ -27,12 +27,15 @@ async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
     throw new Error('[tuimon] At least one page must be defined')
   }
 
+  // Show loading message
+  process.stderr.write('[tuimon] Starting...\r')
+
   // Detect terminal capabilities
   const graphics = await detectGraphicsSupport()
   const dims = await getTerminalDimensions()
 
   if (!graphics.protocol) {
-    console.error('[tuimon] No supported graphics protocol detected. Falling back to kitty.')
+    process.stderr.write('[tuimon] No graphics protocol detected, using kitty fallback.\n')
   }
 
   // iterm2 uses kitty-compatible rendering for our purposes
@@ -109,11 +112,24 @@ async function start(options: TuiMonOptions): Promise<TuiMonDashboard> {
   const defaultPageUrl = server.urlFor(defaultFilename)
 
   // Start browser — navigate directly to the default page
-  const browser = await createBrowser({
-    url: defaultPageUrl,
-    width: viewportWidth,
-    height: viewportHeight,
-  })
+  process.stderr.write('[tuimon] Launching browser...\r')
+  let browser: import('./types.js').BrowserHandle
+  try {
+    browser = await createBrowser({
+      url: defaultPageUrl,
+      width: viewportWidth,
+      height: viewportHeight,
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('Executable doesn\'t exist') || msg.includes('browserType.launch')) {
+      console.error('[tuimon] Chromium browser not found.')
+      console.error('[tuimon] Run: npx playwright install chromium')
+      process.exit(1)
+    }
+    throw err
+  }
+  process.stderr.write('[tuimon] Ready.             \r')
 
   // Enter alt screen + hide cursor
   process.stdout.write('\x1b[?1049h\x1b[?25l')
