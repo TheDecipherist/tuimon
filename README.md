@@ -1,18 +1,22 @@
 # TuiMon
 
-> Your HTML, CSS, and JavaScript — rendered directly in the terminal.
+> Your HTML, CSS, and JavaScript, rendered directly in the terminal.
 
 ## What Is TuiMon?
 
-TuiMon takes any HTML page and renders it in your terminal. Write your dashboard with HTML, CSS flexbox, Chart.js, D3 — whatever you already know — and TuiMon displays it as a live, interactive terminal application. No curses. No blessed. No terminal UI framework. Just web tech you already use.
+TuiMon takes any HTML page and renders it live in your terminal. Write your dashboard with HTML, CSS flexbox, Chart.js, D3, or whatever you already know, and TuiMon turns it into a real-time terminal application.
+
+No curses. No blessed. No terminal UI framework. Just the web tech you already use.
 
 ```
-Your HTML/CSS/JS → Headless Chromium → Screenshot → Terminal Graphics Protocol → Terminal
+Your HTML/CSS/JS > Headless Chromium > Screenshot > Terminal Graphics > Your Terminal
 ```
 
-You get the full power of the browser rendering engine in your terminal. If it works in a browser, it works in TuiMon.
+If it works in a browser, it works in TuiMon.
 
-## Quick Demo
+But you don't have to write HTML if you don't want to. TuiMon also comes with a beautiful built-in theme and a set of zero-config CLI tools that let you visualize files, databases, and live data without writing a single line of HTML.
+
+## Quick Start
 
 ```bash
 npm install -g tuimon
@@ -20,11 +24,11 @@ tuimon init       # scaffolds a starter dashboard
 tuimon start      # renders it in your terminal
 ```
 
-## Three Ways to Use TuiMon
+---
 
-### 1. Custom HTML Dashboard (The Core)
+## 1. Build Your Own Dashboard with HTML
 
-Write your dashboard as normal HTML. Use CSS flexbox, grid, animations — anything. Use any charting library. TuiMon renders it in your terminal at ~20 FPS.
+This is what TuiMon was built for. You write your dashboard as a normal HTML page. Use CSS flexbox, grid, animations, whatever. Use any charting library. TuiMon renders it in your terminal.
 
 ```html
 <!-- pages/dashboard.html -->
@@ -42,7 +46,7 @@ Write your dashboard as normal HTML. Use CSS flexbox, grid, animations — anyth
 <script>
   TuiMon.onUpdate(function(data) {
     TuiMon.set('#memValue', data.memory + '%')
-    // update your charts, DOM, anything
+    // update your charts, DOM, anything you want
   })
 </script>
 ```
@@ -67,7 +71,9 @@ const dash = await tuimon.start({
 })
 ```
 
-**Multi-page navigation:** Define multiple HTML pages with keyboard shortcuts to switch between them. Press a shortcut key to jump to a detail page, ESC to go back.
+### Multiple Pages
+
+You can define multiple HTML pages and let users switch between them with keyboard shortcuts. Press a letter to jump to a detail page, ESC to go back.
 
 ```typescript
 pages: {
@@ -77,16 +83,27 @@ pages: {
 }
 ```
 
-**Client library:** TuiMon injects a client script into your HTML pages automatically:
-- `TuiMon.onUpdate(callback)` — receive data from `dash.render(data)`
-- `TuiMon.set(selector, value)` — update text content or styles
-- `TuiMon.notify(message)` — dispatch notification events
+### Client Library
 
-**Shortcut badges:** Add `data-tm-key="g"` to any element and TuiMon renders a `[G]` badge in the corner — users know they can press G to navigate there.
+TuiMon automatically injects a small client script into your HTML pages. You use it to receive data updates:
 
-### 2. Declarative Dashboard (No HTML Required)
+- `TuiMon.onUpdate(callback)` receives data whenever `dash.render(data)` is called
+- `TuiMon.set(selector, value)` is a shortcut to update text content or styles
+- `TuiMon.notify(message)` dispatches a notification event
 
-Don't want to write HTML? Define widgets in a config and push data:
+### Shortcut Badges
+
+Add `data-tm-key="g"` to any element and TuiMon automatically renders a `[G]` badge in the corner. Users immediately know they can press G to navigate there.
+
+### F-Key Bar
+
+Each page can define its own F-key bindings. The bar at the bottom of the terminal always shows the active page's keys.
+
+---
+
+## 2. Use the Built-in Theme (No HTML Needed)
+
+If you don't want to design anything, TuiMon comes with a built-in dark neon theme. Just define your widgets and push data. TuiMon generates the HTML for you behind the scenes.
 
 ```typescript
 const dash = await tuimon.start({
@@ -120,52 +137,93 @@ const dash = await tuimon.start({
 })
 ```
 
-TuiMon generates a dark neon-themed HTML dashboard from the config. Under the hood, it's still rendering HTML — you just don't have to write it.
+### Widget Types
 
-**8 widget types:** `stat`, `gauge`, `line`, `doughnut`, `bar`, `event-log`, `status-grid`, `table`
+There are 8 built-in widget types: `stat`, `gauge`, `line`, `doughnut`, `bar`, `event-log`, `status-grid`, and `table`.
 
-**Lazy data format:** Just send numbers. TuiMon figures out the rest:
+### Just Send Numbers
 
-| You send | TuiMon shows |
-|----------|-------------|
-| `42` | Stat card |
-| `73` (id contains cpu/mem) | Gauge (0-100%) |
-| `{ Requests: 340, Errors: 12 }` | Line chart (auto-accumulates history) |
-| `['Deploy completed']` | Event log (auto-timestamped) |
-| `['Node-1', 'Node-2']` | Status grid (green dots) |
+You don't need to learn a data format. Just send the simplest thing and TuiMon figures it out:
 
-**Per-widget throttle:** Charts update every frame, event logs every 2s, status grids every 5s — each widget controls its own refresh rate.
+| What you send | What TuiMon shows |
+|---------------|-------------------|
+| `42` | Stat card with the number |
+| `73` (for something named cpu or mem) | Gauge bar showing 73% |
+| `{ Requests: 340, Errors: 12 }` | Line chart that builds up over time |
+| `['Deploy completed']` | Event log with automatic timestamps |
+| `['Node-1', 'Node-2']` | Status grid with green dots |
 
-### 3. Instant CLI Tools (Zero Setup)
+For line charts, you don't manage history. Each render call sends the current values and TuiMon accumulates the history automatically.
 
-Point TuiMon at any data and get a dashboard instantly:
+### Per-Widget Throttle
+
+Each widget can update at its own speed. Your charts can update every frame while your event log only updates every 2 seconds and your status grid every 5 seconds. Just add `throttle: 2000` to any widget config.
+
+---
+
+## 3. Instant Visualization (Zero Setup)
+
+Sometimes you just need to quickly look at some data. TuiMon can do that too.
+
+### View a File
 
 ```bash
-# Data files
-tuimon data.json                    # JSON → table + charts
-tuimon users.csv                    # CSV → table + charts
-tuimon access.log                   # Nginx → request stats + browsable table
-tuimon modsec_audit.log             # ModSecurity → security dashboard
-tuimon data.json -c "name,age"      # Show specific columns
-
-# Live data
-tuimon watch metrics.js             # JS module that exports a data function
-tuimon watch --url http://localhost:3000/metrics  # Poll JSON endpoint
-
-# Database (uses your project's driver from node_modules + connection from .env)
-tuimon db users                     # View table/collection
-tuimon db users --watch             # Live refresh
-tuimon db "SELECT * FROM orders"    # Custom query
-tuimon db users --env MY_DB_URI     # Specify env var for connection string
+tuimon data.json                    # JSON array of objects, shown as table + charts
+tuimon users.csv                    # CSV file, auto-detects delimiter
+tuimon access.log                   # Nginx access log, shows request stats
+tuimon modsec_audit.log             # ModSecurity log, shows security dashboard
+tuimon data.json -c "name,age"      # Only show specific columns
 ```
 
-**Auto-detected formats:** JSON/JSONL, CSV/TSV, Nginx combined log, ModSecurity audit log (v2/v3), JSON logs, plain text.
+TuiMon auto-detects the file format, picks the right widgets, and builds a dashboard. It also watches the file for changes so the dashboard updates if the file is modified.
 
-**File watching:** Dashboard updates when the file changes on disk.
+Press D to switch to a full-screen data table. Use arrow keys to page through the data. ESC goes back.
 
-**Database support:** MongoDB, PostgreSQL, MySQL, SQLite — auto-detects the driver from `node_modules/` and connection string from `.env`.
+### Watch Live Data
 
-**Navigation:** Press **D** for full-screen data table, **ESC** to go back, arrow keys to paginate.
+Create a JS file that exports a function returning your data:
+
+```js
+// metrics.js
+const os = require('os')
+module.exports = () => ({
+  cpu: getCpuPercent(),
+  memory: getMemPercent(),
+  uptime: process.uptime(),
+})
+```
+
+```bash
+tuimon watch metrics.js
+```
+
+TuiMon calls your function every second, auto-detects the data shape, and builds a dashboard.
+
+You can also poll an HTTP endpoint that returns JSON:
+
+```bash
+tuimon watch --url http://localhost:3000/metrics
+tuimon watch --url http://localhost:3000/metrics --interval 5000
+```
+
+### View a Database Table
+
+If you are working on a project that already has a database driver installed and a connection string in `.env`, you can view your data directly:
+
+```bash
+tuimon db users                          # view a table or collection
+tuimon db users --watch                  # re-query every 2 seconds
+tuimon db "SELECT * FROM orders"         # run a custom query
+tuimon db users --query '{"active":true}'  # MongoDB filter
+tuimon db users --env MY_DB_URI          # use a specific env variable
+tuimon db users -c "name,email,role"     # only show these columns
+```
+
+TuiMon finds the database driver in your project's `node_modules/` folder and reads the connection string from your `.env` file. It supports MongoDB, PostgreSQL, MySQL, and SQLite.
+
+No new dependencies are installed. TuiMon uses whatever driver your project already has.
+
+---
 
 ## Terminal Support
 
@@ -175,56 +233,66 @@ tuimon db users --env MY_DB_URI     # Specify env var for connection string
 | Ghostty | Kitty | Supported |
 | WezTerm | Kitty | Supported |
 | iTerm2 | iTerm2 | Supported |
-| **VSCode** | Sixel | **Supported** |
+| VSCode | Sixel | Supported |
 | mlterm | Sixel | Supported |
 
-### VSCode Setup
+### VSCode
 
-Running `tuimon init` automatically enables terminal images in VSCode by creating `.vscode/settings.json` with:
+Running `tuimon init` automatically enables terminal images in VSCode. It creates a `.vscode/settings.json` file with:
 
 ```json
 { "terminal.integrated.enableImages": true }
 ```
 
+If you are adding TuiMon to an existing project, add that setting manually or run `tuimon init`.
+
+---
+
 ## Global Config
 
-Set preferences once in `~/.tuimon/config.json`:
+You can set preferences once so you don't have to repeat them:
 
 ```bash
-tuimon config db.envVar MONGODB_URI    # default env var for DB connections
-tuimon config db.defaultLimit 500      # default row limit
-tuimon config refresh 250              # default refresh rate
-tuimon config                          # view current config
-tuimon config --reset                  # reset to defaults
+tuimon config db.envVar MONGODB_URI    # which env var holds your DB connection
+tuimon config db.defaultLimit 500      # how many rows to show by default
+tuimon config refresh 250              # default refresh rate in ms
+tuimon config                          # show current config
+tuimon config --reset                  # reset everything to defaults
 ```
+
+Config is stored in `~/.tuimon/config.json`.
+
+---
 
 ## CLI Reference
 
-| Command | Description |
-|---------|-------------|
+| Command | What it does |
+|---------|--------------|
 | `tuimon <file>` | Visualize a JSON, CSV, or log file |
-| `tuimon watch <file.js>` | Live dashboard from a data module |
+| `tuimon watch <file.js>` | Live dashboard from a JS data module |
 | `tuimon watch --url <url>` | Poll a JSON endpoint |
-| `tuimon db <table\|query>` | View database table or run query |
-| `tuimon start` | Run from tuimon.config.ts (custom HTML) |
-| `tuimon init` | Scaffold a starter project + enable VSCode |
-| `tuimon check` | Check terminal graphics support |
-| `tuimon config` | View/set global preferences |
-| `tuimon ai` | Print AI integration guide |
+| `tuimon db <table or query>` | View a database table or run a query |
+| `tuimon start` | Run a custom HTML dashboard from tuimon.config.ts |
+| `tuimon init` | Scaffold a starter project and enable VSCode |
+| `tuimon check` | Check if your terminal supports graphics |
+| `tuimon config` | View or set global preferences |
+| `tuimon ai` | Print the AI integration guide |
 
-**Environment:** `TUIMON_DEBUG=1` prints per-frame timing to stderr.
+Set `TUIMON_DEBUG=1` to print per-frame timing to stderr.
+
+---
 
 ## How It Works
 
-TuiMon renders your HTML pages in a headless Chromium browser via Playwright, takes PNG screenshots, and streams them to your terminal using the Kitty graphics protocol (or Sixel as fallback). The F-key bar and keyboard navigation run natively in the terminal.
+TuiMon runs a headless Chromium browser via Playwright. Your HTML page loads in the browser. TuiMon pushes data into the page, takes a PNG screenshot, encodes it using the Kitty graphics protocol (or Sixel for terminals that need it), and writes it to stdout. The F-key bar and keyboard input run natively in the terminal.
 
-Typical frame: **~50ms** (push data → screenshot → encode → display).
+A typical frame takes about 50ms from data push to pixels on screen.
+
+---
 
 ## Contributing
 
-- TDD required — write tests first
-- Coverage thresholds: 80% lines, 80% functions, 75% branches
-- Strict TypeScript — `strict: true`, `noUncheckedIndexedAccess`, no `any`
+Tests first, implementation second. Coverage thresholds are 80% lines, 80% functions, and 75% branches. TypeScript is strict with no exceptions.
 
 ## License
 
