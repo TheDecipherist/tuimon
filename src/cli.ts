@@ -61,8 +61,37 @@ program
 
     const columns = opts.columns ? opts.columns.split(',').map((c) => c.trim()).filter(Boolean) : undefined
 
-    // Check for preset file patterns first
     const basename = file.split('/').pop()?.split('\\').pop() ?? ''
+
+    // HTML file: render it directly, that's what TuiMon is for
+    if (basename.endsWith('.html') || basename.endsWith('.htm')) {
+      if (!existsSync(file)) { console.error(`[tuimon] File not found: ${file}`); process.exit(1) }
+      const tuimon = (await import('./index.js')).default
+      const resolvedPath = path.resolve(process.cwd(), file)
+      const dash = await tuimon.start({
+        pages: {
+          main: {
+            html: resolvedPath,
+            default: true,
+            keys: {
+              F5: { label: 'Reload', action: async () => { await dash.render({}) } },
+              F10: { label: 'Quit', action: () => process.exit(0) },
+            },
+          },
+        },
+        renderDelay: 0,
+      })
+      await dash.render({})
+      // Watch for file changes
+      const { watch } = await import('chokidar')
+      const watcher = watch(resolvedPath, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 200 } })
+      watcher.on('change', async () => {
+        try { await dash.render({}) } catch { /* ignore */ }
+      })
+      return
+    }
+
+    // Check for preset file patterns
 
     if (basename === 'package-lock.json' || basename === 'yarn.lock' || basename === 'pnpm-lock.yaml') {
       if (!existsSync(file)) { console.error(`[tuimon] File not found: ${file}`); process.exit(1) }
