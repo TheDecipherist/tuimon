@@ -55,6 +55,30 @@ program
 
     const columns = opts.columns ? opts.columns.split(',').map((c) => c.trim()).filter(Boolean) : undefined
 
+    // Check for preset file patterns first
+    const basename = file.split('/').pop()?.split('\\').pop() ?? ''
+
+    if (basename === 'package-lock.json' || basename === 'yarn.lock' || basename === 'pnpm-lock.yaml') {
+      if (!existsSync(file)) { console.error(`[tuimon] File not found: ${file}`); process.exit(1) }
+      const { depsPreset } = await import('./quick/presets/deps.js')
+      const { runPreset } = await import('./quick/presets/runner.js')
+      await runPreset(depsPreset(file))
+      return
+    }
+
+    if (basename.includes('coverage') || basename.endsWith('.lcov') || (basename.endsWith('.xml') && existsSync(file))) {
+      if (!existsSync(file)) { console.error(`[tuimon] File not found: ${file}`); process.exit(1) }
+      // Check if it's a coverage/junit file
+      try {
+        const { coveragePreset } = await import('./quick/presets/coverage.js')
+        const { runPreset } = await import('./quick/presets/runner.js')
+        await runPreset(coveragePreset(file))
+        return
+      } catch {
+        // Not a coverage file, fall through to normal detection
+      }
+    }
+
     // Quick mode: detect file type and visualize
     const { detectInputType } = await import('./quick/detect.js')
     const inputType = detectInputType(file)
@@ -102,6 +126,35 @@ program
         await startFileMode(file)
       }
     }
+  })
+
+// ─── Preset subcommands ──────────────────────────────────────────────────────
+
+program
+  .command('docker')
+  .description('Live Docker container dashboard')
+  .action(async () => {
+    const { dockerPreset } = await import('./quick/presets/docker.js')
+    const { runPreset } = await import('./quick/presets/runner.js')
+    await runPreset(dockerPreset())
+  })
+
+program
+  .command('git')
+  .description('Git repository dashboard')
+  .action(async () => {
+    const { gitPreset } = await import('./quick/presets/git.js')
+    const { runPreset } = await import('./quick/presets/runner.js')
+    await runPreset(gitPreset())
+  })
+
+program
+  .command('ps')
+  .description('Live process monitor')
+  .action(async () => {
+    const { psPreset } = await import('./quick/presets/ps.js')
+    const { runPreset } = await import('./quick/presets/runner.js')
+    await runPreset(psPreset())
   })
 
 // ─── Start command: tuimon start (full config mode) ──────────────────────────

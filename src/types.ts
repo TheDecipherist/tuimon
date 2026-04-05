@@ -58,7 +58,7 @@ export interface TuiMonOptions {
    * Auto-render interval in ms. Requires data to be set.
    * Default: no auto-render — developer calls dash.render() manually.
    */
-  refresh?: number
+  refresh?: number | undefined
   /** Delay in ms after pushData() before screenshotting. Default: 50 */
   renderDelay?: number
 }
