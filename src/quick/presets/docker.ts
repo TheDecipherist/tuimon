@@ -36,31 +36,41 @@ export function dockerPreset(): PresetResult {
     'stats', '--format', '{{json .}}',
   ], { stdio: ['ignore', 'pipe', 'ignore'] })
 
+  // Strip ANSI escape sequences from docker stats output
+  function stripAnsi(s: string): string {
+    return s.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '').replace(/\x1b\[?[0-9;]*[A-Za-z]/g, '')
+  }
+
   let lineBuf = ''
+  let currentBatch: DockerStatsEntry[] = []
+
   statsProc.stdout.on('data', (chunk: Buffer) => {
-    lineBuf += chunk.toString()
-    // docker stats outputs a batch of lines (one per container) then a blank separator
+    lineBuf += stripAnsi(chunk.toString())
     const lines = lineBuf.split('\n')
-    const batch: DockerStatsEntry[] = []
+    // Keep last potentially incomplete line
+    lineBuf = lines.pop() ?? ''
 
     for (const line of lines) {
       const trimmed = line.trim()
-      if (!trimmed) {
-        // End of batch - update cache
-        if (batch.length > 0) {
-          latestStats = batch.slice()
+      if (!trimmed) continue
+      // Try to parse each line as JSON
+      try {
+        const entry = JSON.parse(trimmed) as DockerStatsEntry
+        currentBatch.push(entry)
+        // Docker stats outputs one line per container then repeats.
+        // We detect a new batch when we see a Name we already have in the current batch.
+        const names = currentBatch.map((e) => e.Name)
+        const hasDuplicate = names.length !== new Set(names).size
+        if (hasDuplicate) {
+          // The last entry is the start of a new batch - save everything before it
+          latestStats = currentBatch.slice(0, -1)
+          currentBatch = [entry]
           statsReady = true
         }
-        continue
-      }
-      try {
-        batch.push(JSON.parse(trimmed) as DockerStatsEntry)
       } catch {
-        // skip unparseable lines (ANSI clear sequences from docker)
+        // Not JSON, skip
       }
     }
-    // Keep the last incomplete line in buffer
-    lineBuf = lines[lines.length - 1] ?? ''
   })
 
   // Clean up on exit
