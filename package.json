@@ -1,6 +1,6 @@
 {
   "name": "tuimon",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Render beautiful HTML dashboards directly in your terminal.",
   "type": "module",
   "bin": {

@@ -36,7 +36,7 @@ export function gitPreset(): PresetResult {
     panels: [
       { id: 'frequency', label: 'Commits per Day (30 days)', type: 'bar', span: 2 },
       { id: 'topContributors', label: 'Top Contributors', type: 'bar' },
-      { id: 'topFiles', label: 'Most Changed Files', type: 'bar' },
+      { id: 'topFiles', label: 'Most Changed Files', type: 'event-log' },
       { id: 'recentCommits', label: 'Recent Commits', type: 'event-log', span: 2 },
     ],
   }
@@ -98,14 +98,15 @@ export function gitPreset(): PresetResult {
 
     const uniqueFilesChanged = fileCounts.size
 
-    // Top 10 most changed files
+    // Top 10 most changed files as event-log entries
     const sortedFiles = [...fileCounts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
-    const topFiles: Record<string, number> = {}
-    for (const [file, count] of sortedFiles) {
-      topFiles[file] = count
-    }
+    const topFiles = sortedFiles.map(([file, count]) => ({
+      text: `${file} (${count} changes)`,
+      type: 'info' as const,
+      time: `${count}x`,
+    }))
 
     // Recent commits
     const recentOutput = execGit('git log -20 --format="%h %s (%an, %ar)"')
