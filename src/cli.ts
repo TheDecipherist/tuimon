@@ -21,10 +21,16 @@ const pkgRoot = path.resolve(__dirname, '..')
 
 const program = new Command()
 
+// Read version from package.json
+const pkgJsonPath = path.resolve(pkgRoot, 'package.json')
+const pkgVersion = existsSync(pkgJsonPath)
+  ? (JSON.parse(readFileSync(pkgJsonPath, 'utf-8')) as { version: string }).version
+  : '0.0.0'
+
 program
   .name('tuimon')
   .description('Render beautiful HTML dashboards directly in your terminal.')
-  .version('0.3.0')
+  .version(pkgVersion)
 
 // ─── Default command: tuimon <file> ──────────────────────────────────────────
 
