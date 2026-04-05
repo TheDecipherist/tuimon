@@ -175,6 +175,12 @@ tuimon modsec_audit.log             # ModSecurity log, shows security dashboard
 tuimon data.json -c "name,age"      # Only show specific columns
 ```
 
+You can also render any HTML file directly in the terminal:
+
+```bash
+tuimon dashboard.html               # render any HTML page in the terminal
+```
+
 TuiMon auto-detects the file format, picks the right widgets, and builds a dashboard. It also watches the file for changes so the dashboard updates if the file is modified.
 
 Press D to switch to a full-screen data table. Use arrow keys to page through the data. ESC goes back.
@@ -304,7 +310,7 @@ Config is stored in `~/.tuimon/config.json`.
 
 | Command | What it does |
 |---------|--------------|
-| `tuimon <file>` | Visualize a JSON, CSV, or log file |
+| `tuimon <file>` | Visualize a JSON, CSV, log, or HTML file |
 | `tuimon docker` | Live Docker container dashboard (press L for logs) |
 | `tuimon git` | Git repository analysis dashboard |
 | `tuimon ps` | Live process monitor (press P for full table) |
