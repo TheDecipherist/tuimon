@@ -7,7 +7,6 @@ dist/
 coverage/
 .claude/
 _ai_temp/
-docs/
 MDs/
 .mdd/
 frame-log.txt

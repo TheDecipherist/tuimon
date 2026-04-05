@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TuiMon — Render HTML Dashboards in Your Terminal</title>
+  <meta name="description" content="TuiMon renders beautiful HTML dashboards directly in your terminal using Kitty, Sixel, and iTerm2 graphics protocols. Build with HTML/CSS/JS, view in any modern terminal.">
+  <meta name="theme-color" content="#09090b">
+  <meta property="og:title" content="TuiMon — HTML Dashboards in Your Terminal">
+  <meta property="og:description" content="Render beautiful HTML dashboards directly in your terminal. Build with web tech, view with terminal graphics.">
+  <meta property="og:image" content="images/hero.webp">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://app.rybbit.io/api/script.js" data-site-id="e7e29192d813" defer></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="container">
+    <nav>
+      <ul>
+        <li>
+          <a href="#" class="brand">
+            <span class="brand-title">TuiMon</span>
+            <span class="brand-version">v0.3</span>
+          </a>
+        </li>
+      </ul>
+      <ul class="desktop-nav">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#quick-start">Quick Start</a></li>
+        <li><a href="#presets">Presets</a></li>
+        <li><a href="https://github.com/TheDecipherist/tuimon">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/tuimon">npm</a></li>
+      </ul>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu-overlay" id="mobile-menu-overlay"></div>
+<nav class="mobile-menu" id="mobile-menu">
+  <div class="mobile-toc">
+    <a href="#in-action">See It In Action</a>
+    <a href="#features">Features</a>
+    <a href="#quick-start">Quick Start</a>
+    <a href="#custom-dashboards">Custom Dashboards</a>
+    <a href="#declarative-mode">Declarative Mode</a>
+    <a href="#quick-mode">Quick Mode</a>
+    <a href="#presets">Built-in Presets</a>
+    <a href="#database">Database Viewer</a>
+    <a href="#keyboard">Keyboard Control</a>
+    <a href="#terminals">Terminal Support</a>
+    <a href="#api">API Reference</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="hero-badge">Terminal UI Monitor</div>
+    <h1>Render HTML Dashboards<br>Directly in Your Terminal</h1>
+    <p class="hero-subtitle">
+      Build dashboards with HTML, CSS, and JavaScript. TuiMon renders them in headless Chromium
+      and streams pixel-perfect images to your terminal via Kitty, Sixel, or iTerm2 graphics.
+    </p>
+    <div class="hero-install" onclick="navigator.clipboard.writeText('npm install -g tuimon')">
+      <span class="dollar">$</span>npm install -g tuimon
+      <span class="copy-hint">click to copy</span>
+    </div>
+    <div class="hero-actions">
+      <a href="#quick-start" class="btn btn-primary">Get Started</a>
+      <a href="https://github.com/TheDecipherist/tuimon" class="btn btn-secondary">View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- Hero Banner -->
+<div class="hero-banner">
+  <img src="images/hero.webp" alt="TuiMon — HTML dashboards rendered directly in your terminal with charts, gauges, and live data" loading="lazy">
+</div>
+
+<!-- Main Layout -->
+<div class="container">
+  <div class="main-layout">
+
+    <!-- Sidebar TOC -->
+    <aside id="sidebar">
+      <div class="toc-header">On this page</div>
+      <nav id="toc">
+        <a href="#in-action">See It In Action</a>
+        <a href="#features">Features</a>
+        <a href="#quick-start">Quick Start</a>
+        <a href="#custom-dashboards">Custom HTML Dashboards</a>
+        <a href="#declarative-mode">Declarative Mode</a>
+        <a href="#quick-mode">Quick Mode</a>
+        <a href="#presets">Built-in Presets</a>
+        <a href="#database">Database Viewer</a>
+        <a href="#keyboard">Keyboard Control</a>
+        <a href="#terminals">Terminal Support</a>
+        <a href="#widgets">Widget Types</a>
+        <a href="#api">API Reference</a>
+      </nav>
+    </aside>
+
+    <!-- Content -->
+    <main id="content">
+
+      <!-- See It In Action -->
+      <section id="in-action">
+        <h2>See It In Action</h2>
+        <p>TuiMon renders directly inside your terminal &mdash; including the VS Code integrated terminal. No browser tabs, no separate windows. Your dashboards live right next to your code, so you never need to leave your IDE.</p>
+
+        <h3>Live API Dashboard</h3>
+        <p>A full production dashboard with stats, traffic charts, service health, event logs, and endpoint distribution &mdash; all rendered in a VS Code terminal panel while you code.</p>
+        <div class="screenshot">
+          <img src="images/api-view.webp" alt="TuiMon Production API dashboard rendered inside VS Code terminal alongside source code" loading="lazy">
+          <div class="screenshot-caption">TuiMon rendering a live API dashboard directly in the VS Code integrated terminal</div>
+        </div>
+
+        <h3>Nginx Access Log Analysis</h3>
+        <p>Point TuiMon at an access log and get an instant request table with color-coded status codes, all inside your editor. No log viewer needed.</p>
+        <div class="screenshot">
+          <img src="images/access-log.webp" alt="TuiMon analyzing an nginx access log with color-coded request table inside VS Code" loading="lazy">
+          <div class="screenshot-caption"><code>tuimon access.log</code> rendering a request table directly in VS Code &mdash; never leave your IDE</div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section id="features">
+        <h2>Everything You Need</h2>
+        <p>TuiMon bridges web development and terminal UIs. Write dashboards with the tools you already know &mdash; HTML, CSS, JavaScript, Chart.js, D3 &mdash; and render them pixel-perfect in any modern terminal.</p>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon icon-cyan">&#x1F310;</div>
+            <h3>HTML/CSS/JS Dashboards</h3>
+            <p>Write normal web pages. Use flexbox, grid, Chart.js, D3 &mdash; anything that runs in Chromium. TuiMon screenshots and streams to your terminal.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon icon-purple">&#x2699;</div>
+            <h3>Declarative Config</h3>
+            <p>Skip the HTML. Define widgets in TypeScript &mdash; stats, gauges, line charts, event logs &mdash; and TuiMon generates the dashboard for you.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon icon-green">&#x26A1;</div>
+            <h3>Zero-Config Quick Mode</h3>
+            <p>Point at a JSON, CSV, or log file and get an instant dashboard. Auto-detects format, builds charts, watches for changes.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon icon-blue">&#x1F5C4;</div>
+            <h3>Database Viewer</h3>
+            <p>Query MongoDB, PostgreSQL, MySQL, or SQLite directly from your terminal. Uses your project's existing drivers &mdash; no new dependencies.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon icon-amber">&#x1F4E6;</div>
+            <h3>Built-in Presets</h3>
+            <p>Ready-made dashboards for Docker containers, Git stats, process monitoring, and dependency analysis. Just run and go.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon icon-pink">&#x2328;</div>
+            <h3>Keyboard Navigation</h3>
+            <p>F-keys for actions, letter shortcuts for pages, ESC to go back. Full keyboard control with a status bar showing available bindings.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick Start -->
+      <section id="quick-start">
+        <h2>Quick Start</h2>
+
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Install TuiMon</h3>
+<pre class="language-bash"><code>npm install -g tuimon</code></pre>
+            <p>Requires Node.js 20+ and a terminal with graphics support (Kitty, iTerm2, WezTerm, Ghostty, or VSCode).</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Scaffold a project</h3>
+<pre class="language-bash"><code>tuimon init
+tuimon start</code></pre>
+            <p>Creates a starter dashboard with overview, CPU detail, and memory detail pages. Renders immediately.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Or just point at data</h3>
+<pre class="language-bash"><code># Visualize any file instantly
+tuimon data.json
+tuimon sales.csv
+tuimon access.log
+
+# Watch a data source
+tuimon watch metrics.js
+tuimon watch --url http://localhost:3000/metrics
+
+# Built-in dashboards
+tuimon docker
+tuimon git
+tuimon ps</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Custom HTML Dashboards -->
+      <section id="custom-dashboards">
+        <h2>Custom HTML Dashboards</h2>
+        <p>Build dashboards with standard web technologies. TuiMon auto-injects a client script that receives live data updates. Use any charting library, any CSS framework, any JavaScript you want.</p>
+
+<pre class="language-html"><code>&lt;div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px;"&gt;
+  &lt;div&gt;
+    &lt;h3&gt;CPU Usage&lt;/h3&gt;
+    &lt;canvas id="cpuChart"&gt;&lt;/canvas&gt;
+  &lt;/div&gt;
+  &lt;div id="memValue" style="font-size: 48px;"&gt;--&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+  // Receive live data from TuiMon
+  TuiMon.onUpdate(function(data) {
+    TuiMon.set('#memValue', data.memory + '%')
+    updateChart(data.cpu)
+  })
+&lt;/script&gt;</code></pre>
+
+        <p>Configure pages, shortcuts, and F-key bindings in <code>tuimon.config.ts</code>:</p>
+
+<pre class="language-typescript"><code>export default {
+  pages: {
+    overview: { html: './pages/overview.html', default: true },
+    cpu:      { html: './pages/cpu-detail.html', shortcut: 'g', label: 'CPU Detail' },
+    memory:   { html: './pages/memory-detail.html', shortcut: 'm', label: 'Memory' },
+  },
+  refresh: 1000,
+  data: async () => ({
+    cpu: getCpuPercent(),
+    memory: getMemPercent(),
+    uptime: process.uptime(),
+  }),
+  keys: {
+    F5: { label: 'Refresh', action: async () => dash.render(await getData()) },
+    F10: { label: 'Quit', action: () => process.exit(0) },
+  },
+}</code></pre>
+
+        <div class="screenshot">
+          <img src="images/declarative-mode.png" alt="Custom HTML dashboard with charts, gauges, and event logs" loading="lazy">
+          <div class="screenshot-caption">A custom HTML dashboard with real-time traffic charts, node health indicators, and event logs</div>
+        </div>
+      </section>
+
+      <!-- Declarative Mode -->
+      <section id="declarative-mode">
+        <h2>Declarative Mode</h2>
+        <p>Don't want to write HTML? Define your dashboard entirely in TypeScript. TuiMon generates a dark-themed dashboard with the widgets you specify.</p>
+
+<pre class="language-typescript"><code>import tuimon from 'tuimon'
+
+const dash = await tuimon.start({
+  layout: {
+    title: 'Production API',
+    stats: [
+      { id: 'users', label: 'Users Online', type: 'stat' },
+      { id: 'cpu', label: 'CPU', type: 'gauge' },
+      { id: 'memory', label: 'Memory', type: 'gauge' },
+    ],
+    panels: [
+      { id: 'traffic', label: 'Traffic', type: 'line', span: 2 },
+      { id: 'services', label: 'Services', type: 'status-grid' },
+      { id: 'endpoints', label: 'Endpoints', type: 'doughnut' },
+      { id: 'events', label: 'Events', type: 'event-log', throttle: 2000 },
+      { id: 'latency', label: 'Response Times', type: 'bar' },
+    ],
+  },
+  refresh: 500,
+  data: () => ({
+    users: 1847,
+    cpu: 67,
+    memory: 54,
+    traffic: { Requests: 312, Errors: 10, 'Latency (ms)': 80 },
+    services: ['API Gateway', 'Auth Service', 'Database', 'CDN'],
+    endpoints: { '/api/users': 35, '/api/orders': 25, '/api/auth': 20 },
+    events: ['Deploy v2.4.1 completed'],
+    latency: { p50: 42, p75: 68, p90: 125, p95: 210, p99: 450 },
+  }),
+})</code></pre>
+
+        <p><strong>Smart data format</strong> &mdash; just send what you have. TuiMon figures out the rest:</p>
+        <ul>
+          <li><code>42</code> &rarr; stat card</li>
+          <li><code>73</code> (for gauge widget) &rarr; percentage bar</li>
+          <li><code>{ Requests: 340, Errors: 12 }</code> &rarr; auto-accumulating line chart</li>
+          <li><code>['Deploy completed']</code> &rarr; timestamped event log</li>
+          <li><code>['Node-1', 'Node-2']</code> &rarr; status grid with health indicators</li>
+        </ul>
+
+        <div class="screenshot">
+          <img src="images/declarative-mode.png" alt="Declarative dashboard with traffic charts, service health, events, and latency bars" loading="lazy">
+          <div class="screenshot-caption">A declarative dashboard with traffic monitoring, service health grid, event log, and response time percentiles</div>
+        </div>
+      </section>
+
+      <!-- Quick Mode -->
+      <section id="quick-mode">
+        <h2>Quick Mode &mdash; Zero Config</h2>
+        <p>Point TuiMon at any file and get an instant dashboard. It auto-detects the format, parses the data, builds an appropriate layout, and watches for changes.</p>
+
+        <div class="command-grid">
+          <div class="command-card">
+            <h4><code>tuimon data.json</code></h4>
+            <p>JSON or JSONL &rarr; table + charts from data shape</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon sales.csv</code></h4>
+            <p>CSV/TSV &rarr; table + bar/line/doughnut charts</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon access.log</code></h4>
+            <p>Nginx logs &rarr; request stats, status codes, endpoints</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon modsec.log</code></h4>
+            <p>ModSecurity &rarr; attack dashboard, severity, top rules</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon results.xml</code></h4>
+            <p>JUnit XML &rarr; test results and coverage dashboard</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon watch metrics.js</code></h4>
+            <p>JS/TS module &rarr; call your function on interval</p>
+          </div>
+        </div>
+
+        <h3>JSON File Visualization</h3>
+        <div class="screenshot">
+          <img src="images/json-mode.png" alt="JSON file visualized as table with role distribution doughnut and score histogram" loading="lazy">
+          <div class="screenshot-caption"><code>tuimon users.json</code> &mdash; auto-detected table with role distribution and score histogram</div>
+        </div>
+
+        <h3>CSV File Visualization</h3>
+        <div class="screenshot">
+          <img src="images/csv-mode.png" alt="CSV file visualized as revenue chart with category breakdown" loading="lazy">
+          <div class="screenshot-caption"><code>tuimon sales-2024.csv</code> &mdash; monthly revenue trends, category breakdown, and data preview</div>
+        </div>
+
+        <h3>Log File Analysis</h3>
+        <div class="screenshot">
+          <img src="images/log-mode.png" alt="Nginx access log analyzed with request timeline, status codes, methods, and top endpoints" loading="lazy">
+          <div class="screenshot-caption"><code>tuimon access.log</code> &mdash; request timeline, status code breakdown, HTTP methods, and top endpoints</div>
+        </div>
+      </section>
+
+      <!-- Built-in Presets -->
+      <section id="presets">
+        <h2>Built-in Presets</h2>
+        <p>Ready-made dashboards for common developer tasks. No configuration, no data files &mdash; just run the command.</p>
+
+        <h3>Docker Dashboard</h3>
+        <p>Live container stats with CPU/memory charts, status grid, and event log. Press <code>L</code> for container logs.</p>
+<pre class="language-bash"><code>tuimon docker</code></pre>
+        <div class="screenshot">
+          <img src="images/preset-docker.png" alt="Docker dashboard showing container CPU, memory, and status" loading="lazy">
+          <div class="screenshot-caption">Live Docker container monitoring with CPU/memory line charts and status indicators</div>
+        </div>
+
+        <h3>Git Repository Analysis</h3>
+        <p>Commit frequency, top contributors, most changed files, and recent commit log.</p>
+<pre class="language-bash"><code>tuimon git</code></pre>
+        <div class="screenshot">
+          <img src="images/preset-git.png" alt="Git dashboard showing commits per day, contributors, and changed files" loading="lazy">
+          <div class="screenshot-caption">Git repository analysis with 30-day commit history, contributors, and file change frequency</div>
+        </div>
+
+        <h3>Process Monitor</h3>
+        <p>Live system stats with top CPU/memory processes, load averages, and process table.</p>
+<pre class="language-bash"><code>tuimon ps</code></pre>
+        <div class="screenshot">
+          <img src="images/preset-ps.png" alt="Process monitor showing CPU, memory, load average, and top processes" loading="lazy">
+          <div class="screenshot-caption">Real-time process monitoring with CPU/memory charts and sortable process list</div>
+        </div>
+
+        <h3>Dependency Analysis</h3>
+        <p>Analyze <code>package-lock.json</code>, <code>yarn.lock</code>, or <code>pnpm-lock.yaml</code>. Shows total deps, duplicates, version conflicts.</p>
+<pre class="language-bash"><code>tuimon package-lock.json</code></pre>
+        <div class="screenshot">
+          <img src="images/preset-deps.png" alt="Dependency analysis showing total deps, direct vs dev, and most depended packages" loading="lazy">
+          <div class="screenshot-caption">Dependency analysis with package table, most-depended-on chart, and version conflict detection</div>
+        </div>
+      </section>
+
+      <!-- Database Viewer -->
+      <section id="database">
+        <h2>Database Viewer</h2>
+        <p>View database tables directly in your terminal. TuiMon auto-detects your project's database driver from <code>node_modules/</code> and reads the connection string from <code>.env</code>. No new dependencies needed.</p>
+
+<pre class="language-bash"><code># View a table
+tuimon db users
+
+# Custom queries
+tuimon db "SELECT * FROM users WHERE active = true"
+tuimon db users --query '{"active": true}'   # MongoDB
+
+# Connection options
+tuimon db users --uri "mongodb://localhost:27017/myapp"
+tuimon db users --env MY_DB_URI
+
+# Live watch mode
+tuimon db users --watch
+tuimon db users --watch --interval 5000</code></pre>
+
+        <p><strong>Supported databases:</strong> MongoDB, PostgreSQL, MySQL, SQLite</p>
+
+        <div class="screenshot">
+          <img src="images/db-mode.png" alt="MongoDB database viewer showing query results in a table" loading="lazy">
+          <div class="screenshot-caption"><code>tuimon db users</code> &mdash; MongoDB collection with query results, pagination, and keyboard navigation</div>
+        </div>
+      </section>
+
+      <!-- Keyboard Control -->
+      <section id="keyboard">
+        <h2>Keyboard Control</h2>
+        <p>TuiMon uses native terminal stdin for keyboard handling. No terminal UI frameworks needed. The F-key status bar at the bottom shows available bindings for the current page.</p>
+
+        <div class="key-grid">
+          <div class="key-item">
+            <span class="kbd">F1-F12</span>
+            <span class="key-desc">Custom actions per page</span>
+          </div>
+          <div class="key-item">
+            <span class="kbd">A-Z</span>
+            <span class="key-desc">Navigate to shortcut pages</span>
+          </div>
+          <div class="key-item">
+            <span class="kbd">ESC</span>
+            <span class="key-desc">Go back / confirm quit</span>
+          </div>
+          <div class="key-item">
+            <span class="kbd">Ctrl+C</span>
+            <span class="key-desc">Immediate exit</span>
+          </div>
+          <div class="key-item">
+            <span class="kbd">&#x2191; &#x2193;</span>
+            <span class="key-desc">Navigate table rows</span>
+          </div>
+          <div class="key-item">
+            <span class="kbd">D</span>
+            <span class="key-desc">Full-screen data table</span>
+          </div>
+        </div>
+
+        <h3>Custom F-Key Bindings</h3>
+<pre class="language-typescript"><code>keys: {
+  F1:  { label: 'Help',    action: () => showHelp() },
+  F5:  { label: 'Refresh', action: async () => dash.render(await getData()) },
+  F9:  { label: 'Export',  action: () => exportCSV() },
+  F10: { label: 'Quit',    action: () => process.exit(0) },
+}</code></pre>
+
+        <h3>Page Shortcuts</h3>
+        <p>Assign single-letter shortcuts to pages for instant navigation:</p>
+<pre class="language-typescript"><code>pages: {
+  overview: { html: './overview.html', default: true },
+  cpu:      { html: './cpu.html', shortcut: 'g', label: 'CPU Detail' },
+  memory:   { html: './memory.html', shortcut: 'm', label: 'Memory' },
+  network:  { html: './network.html', shortcut: 'n', label: 'Network' },
+}</code></pre>
+      </section>
+
+      <!-- Terminal Support -->
+      <section id="terminals">
+        <h2>Terminal Support</h2>
+        <p>TuiMon auto-detects your terminal's graphics protocol. No configuration needed.</p>
+
+        <table class="compat-table">
+          <thead>
+            <tr>
+              <th>Terminal</th>
+              <th>Protocol</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Kitty</td>
+              <td>Kitty</td>
+              <td><span class="status-badge status-supported">Supported</span></td>
+            </tr>
+            <tr>
+              <td>Ghostty</td>
+              <td>Kitty</td>
+              <td><span class="status-badge status-supported">Supported</span></td>
+            </tr>
+            <tr>
+              <td>WezTerm</td>
+              <td>Kitty</td>
+              <td><span class="status-badge status-supported">Supported</span></td>
+            </tr>
+            <tr>
+              <td>iTerm2</td>
+              <td>iTerm2</td>
+              <td><span class="status-badge status-supported">Supported</span></td>
+            </tr>
+            <tr>
+              <td>VSCode Terminal</td>
+              <td>Sixel</td>
+              <td><span class="status-badge status-supported">Supported</span></td>
+            </tr>
+            <tr>
+              <td>mlterm</td>
+              <td>Sixel</td>
+              <td><span class="status-badge status-supported">Supported</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p><strong>VSCode users:</strong> Run <code>tuimon init</code> to automatically enable <code>terminal.integrated.enableImages: true</code> in your workspace settings.</p>
+
+        <p>Run <code>tuimon check</code> to verify your terminal supports graphics protocols and see detected pixel dimensions.</p>
+      </section>
+
+      <!-- Widget Types -->
+      <section id="widgets">
+        <h2>Widget Types</h2>
+        <p>Eight built-in widget types for declarative dashboards. Each accepts simple data and renders automatically.</p>
+
+        <div class="widget-grid">
+          <div class="widget-card">
+            <div class="widget-name">stat</div>
+            <div class="widget-desc">Single number or text value</div>
+          </div>
+          <div class="widget-card">
+            <div class="widget-name">gauge</div>
+            <div class="widget-desc">0-100% progress bar</div>
+          </div>
+          <div class="widget-card">
+            <div class="widget-name">line</div>
+            <div class="widget-desc">Time-series line chart</div>
+          </div>
+          <div class="widget-card">
+            <div class="widget-name">bar</div>
+            <div class="widget-desc">Categorical comparison</div>
+          </div>
+          <div class="widget-card">
+            <div class="widget-name">doughnut</div>
+            <div class="widget-desc">Distribution / proportion</div>
+          </div>
+          <div class="widget-card">
+            <div class="widget-name">event-log</div>
+            <div class="widget-desc">Scrolling timestamped events</div>
+          </div>
+          <div class="widget-card">
+            <div class="widget-name">status-grid</div>
+            <div class="widget-desc">Health indicator dots</div>
+          </div>
+          <div class="widget-card">
+            <div class="widget-name">table</div>
+            <div class="widget-desc">Paginated data table</div>
+          </div>
+        </div>
+
+        <h3>Per-Widget Throttle</h3>
+        <p>Each widget can update at its own speed. High-frequency data (charts) updates every frame while slow-changing data (status, events) throttles independently.</p>
+<pre class="language-typescript"><code>panels: [
+  { id: 'chart', type: 'line' },                        // every frame
+  { id: 'events', type: 'event-log', throttle: 2000 },  // max every 2s
+  { id: 'health', type: 'status-grid', throttle: 5000 },// max every 5s
+]</code></pre>
+      </section>
+
+      <!-- API Reference -->
+      <section id="api">
+        <h2>API Reference</h2>
+
+        <h3>Programmatic API</h3>
+<pre class="language-typescript"><code>import tuimon from 'tuimon'
+
+// Start returns a dashboard handle
+const dash = await tuimon.start({
+  pages: { ... },      // Page definitions
+  layout: { ... },     // Or declarative layout (no pages needed)
+  data: () => ({ ... }),  // Data provider function
+  refresh: 500,        // Auto-refresh interval (ms)
+  renderDelay: 100,    // Delay before screenshot after data push
+})
+
+// Push data manually
+await dash.render({
+  cpu: 73,
+  memory: 54,
+  requests: 312,
+})
+
+// Graceful shutdown
+await dash.stop()</code></pre>
+
+        <h3>Client-Side API</h3>
+        <p>The <code>TuiMon</code> object is auto-injected into every served HTML page:</p>
+<pre class="language-javascript"><code>// Listen for data updates
+TuiMon.onUpdate(function(data) {
+  document.getElementById('cpu').textContent = data.cpu + '%'
+})
+
+// Set element values by selector
+TuiMon.set('#memory', '54%')
+TuiMon.set('#status', { textContent: 'OK', style: 'color: green' })
+
+// Show temporary notification in F-key bar
+TuiMon.notify('Data exported!', 3000)</code></pre>
+
+        <h3>Data Attributes</h3>
+        <p>Add keyboard shortcut badges to HTML elements automatically:</p>
+<pre class="language-html"><code>&lt;!-- Shows [G] badge on the panel --&gt;
+&lt;div data-tm-key="g" data-tm-label="CPU Detail"&gt;
+  CPU Usage: 73%
+&lt;/div&gt;</code></pre>
+
+        <h3>CLI Commands</h3>
+        <div class="command-grid">
+          <div class="command-card">
+            <h4><code>tuimon start</code></h4>
+            <p>Start dashboard from tuimon.config.ts</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon init</code></h4>
+            <p>Scaffold a starter dashboard project</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon check</code></h4>
+            <p>Verify terminal graphics support</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon &lt;file&gt;</code></h4>
+            <p>Quick-visualize JSON, CSV, or log files</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon watch &lt;file|--url&gt;</code></h4>
+            <p>Watch JS module or poll HTTP endpoint</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon db &lt;table&gt;</code></h4>
+            <p>Query and browse database tables</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon docker</code></h4>
+            <p>Live Docker container dashboard</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon git</code></h4>
+            <p>Git repository statistics</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon ps</code></h4>
+            <p>Live process monitor</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon config</code></h4>
+            <p>View or set global configuration</p>
+          </div>
+          <div class="command-card">
+            <h4><code>tuimon ai</code></h4>
+            <p>Print AI integration guide</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-links">
+      <a href="https://github.com/TheDecipherist/tuimon">GitHub</a>
+      <a href="https://www.npmjs.com/package/tuimon">npm</a>
+      <a href="https://github.com/TheDecipherist/tuimon/issues">Issues</a>
+    </div>
+    <p>TuiMon &mdash; Render HTML dashboards in your terminal.<br>
+    Built by <a href="https://github.com/TheDecipherist">TheDecipherist</a>.</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-markup.min.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

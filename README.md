@@ -1,5 +1,7 @@
 # TuiMon
 
+![TuiMon — HTML dashboards rendered in your terminal](docs/images/hero.webp)
+
 > Your HTML, CSS, and JavaScript, rendered directly in the terminal.
 
 ## What Is TuiMon?
