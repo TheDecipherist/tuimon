@@ -8,6 +8,9 @@ interface ProcessEntry {
   pid: string
   cpu: number
   mem: number
+  vsz: number
+  rss: number
+  stat: string
   command: string
 }
 
@@ -62,18 +65,24 @@ function parsePsOutput(output: string): ProcessEntry[] {
     const line = lines[i]
     if (line === undefined || line.trim() === '') continue
     const parts = line.trim().split(/\s+/)
+    // ps aux columns: USER PID %CPU %MEM VSZ RSS TTY STAT START TIME COMMAND
     const user = parts[0]
     const pid = parts[1]
     const cpuStr = parts[2]
     const memStr = parts[3]
+    const vszStr = parts[4]
+    const rssStr = parts[5]
+    const statStr = parts[7]
     if (user === undefined || pid === undefined || cpuStr === undefined || memStr === undefined) continue
-    // Command is everything from column index 10 onward
     const command = parts.slice(10).join(' ') || parts.slice(4).join(' ')
     entries.push({
       user,
       pid,
       cpu: parseFloat(cpuStr) || 0,
       mem: parseFloat(memStr) || 0,
+      vsz: parseInt(vszStr ?? '0', 10),
+      rss: parseInt(rssStr ?? '0', 10),
+      stat: statStr ?? '',
       command,
     })
   }
@@ -114,10 +123,10 @@ export function psPreset(): PresetResult {
       { id: 'loadAvg', label: 'Load Average', type: 'stat' },
     ],
     panels: [
-      { id: 'topCpu', label: 'Top CPU Processes', type: 'bar', span: 2 },
-      { id: 'topMem', label: 'Top Memory Processes', type: 'bar' },
-      { id: 'cpuHistory', label: 'CPU History', type: 'line' },
-      { id: 'processList', label: 'Process List', type: 'event-log', span: 2, throttle: 2000 },
+      { id: 'cpuHistory', label: 'CPU History', type: 'line', span: 2 },
+      { id: 'topCpu', label: 'Top CPU Processes', type: 'event-log' },
+      { id: 'topMem', label: 'Top Memory Processes', type: 'event-log' },
+      { id: 'processList', label: 'Process List', type: 'table', span: 2, throttle: 2000 },
     ],
   }
 
@@ -144,43 +153,113 @@ export function psPreset(): PresetResult {
     // Load average: try /proc/loadavg first, fallback to uptime
     const loadAvg = parseLoadAvg() ?? getLoadAvgFallback()
 
-    // Top CPU bar chart
-    const topCpu: Record<string, number> = {}
-    for (const p of top10) {
-      const name = p.command.split('/').pop()?.split(' ')[0] ?? p.command
-      const key = name || `pid:${p.pid}`
-      topCpu[key] = (topCpu[key] ?? 0) + p.cpu
-    }
-
-    // Top Memory bar chart — re-sort by memory
-    const byMem = [...processes].sort((a, b) => b.mem - a.mem).slice(0, 10)
-    const topMem: Record<string, number> = {}
-    for (const p of byMem) {
-      const name = p.command.split('/').pop()?.split(' ')[0] ?? p.command
-      const key = name || `pid:${p.pid}`
-      topMem[key] = (topMem[key] ?? 0) + p.mem
-    }
-
     // CPU history — single data point per refresh, line chart accumulates
     const cpuHistory: Record<string, number> = { CPU: cpuUsage }
 
-    // Process list — event-log entries
-    const processList = top10.map((p) => {
+    // Top CPU as event-log with percentage
+    const topCpu = top10.map((p) => {
       const name = p.command.split('/').pop()?.split(' ')[0] ?? p.command
-      return `${name} ${p.cpu}% CPU ${p.mem}% MEM ${p.command}`
+      return { text: `${name} (${p.cpu}%)`, type: 'info' as const, time: `${p.cpu}%` }
     })
+
+    // Top Memory as event-log
+    const byMem = [...processes].sort((a, b) => b.mem - a.mem).slice(0, 10)
+    const topMem = byMem.map((p) => {
+      const name = p.command.split('/').pop()?.split(' ')[0] ?? p.command
+      return { text: `${name} (${p.mem}%)`, type: 'info' as const, time: `${p.mem}%` }
+    })
+
+    // Process list as table
+    const processList = {
+      columns: ['PID', 'User', 'CPU %', 'Mem %', 'Command'],
+      rows: top10.map((p) => ({
+        'PID': p.pid,
+        'User': p.user,
+        'CPU %': p.cpu,
+        'Mem %': p.mem,
+        'Command': (p.command.split('/').pop()?.split(' ')[0] ?? p.command).slice(0, 40),
+      })),
+    }
 
     return {
       total,
       cpuUsage,
       memUsage,
       loadAvg,
+      cpuHistory,
       topCpu,
       topMem,
-      cpuHistory,
       processList,
     }
   }
 
   return { layout, data, refresh: 1000 }
+}
+
+// ─── Full ps preset with process table page ──────────────────────────────────
+
+export async function startPsPreset(): Promise<void> {
+  const preset = psPreset()
+  const initialData = await Promise.resolve(preset.data())
+
+  const tuimon = (await import('../../index.js')).default
+
+  // Full process table data (more rows, more columns)
+  function getFullProcessTable(): Record<string, unknown> {
+    const psOutput = execCommand('ps aux --sort=-%cpu | head -51')
+    const processes = parsePsOutput(psOutput)
+    return {
+      _processTable: {
+        columns: ['PID', 'User', 'CPU %', 'Mem %', 'VSZ (MB)', 'RSS (MB)', 'State', 'Command'],
+        rows: processes.map((p) => ({
+          'PID': p.pid,
+          'User': p.user,
+          'CPU %': p.cpu,
+          'Mem %': p.mem,
+          'VSZ (MB)': Math.round(p.vsz / 1024),
+          'RSS (MB)': Math.round(p.rss / 1024),
+          'State': p.stat,
+          'Command': p.command.slice(0, 80),
+        })),
+      },
+    }
+  }
+
+  const tableLayout: import('../../layout/types.js').LayoutConfig = {
+    title: 'All Processes',
+    panels: [
+      { id: '_processTable', label: 'Process List', type: 'table' as import('../../layout/types.js').WidgetConfig['type'], span: 2 },
+    ],
+  }
+
+  const dash = await tuimon.start({
+    pages: {
+      overview: {
+        html: '',
+        default: true,
+        label: 'Overview',
+        layout: preset.layout,
+        keys: {
+          F5: { label: 'Refresh', action: async () => { await dash.render({ ...await Promise.resolve(preset.data()), ...getFullProcessTable() }) } },
+          F3: { label: 'All Processes [P]', action: () => {} },
+          F10: { label: 'Quit', action: () => { process.exit(0) } },
+        },
+      },
+      procs: {
+        html: '',
+        shortcut: 'p',
+        label: 'Processes',
+        layout: tableLayout,
+        keys: {
+          F5: { label: 'Refresh', action: async () => { await dash.render({ ...await Promise.resolve(preset.data()), ...getFullProcessTable() }) } },
+          F10: { label: 'Quit', action: () => { process.exit(0) } },
+        },
+      },
+    },
+    refresh: preset.refresh,
+    data: async () => ({ ...await Promise.resolve(preset.data()), ...getFullProcessTable() }),
+    renderDelay: 0,
+  })
+
+  await dash.render({ ...initialData, ...getFullProcessTable() })
 }

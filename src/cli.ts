@@ -157,9 +157,8 @@ program
   .command('ps')
   .description('Live process monitor')
   .action(async () => {
-    const { psPreset } = await import('./quick/presets/ps.js')
-    const { runPreset } = await import('./quick/presets/runner.js')
-    await runPreset(psPreset())
+    const { startPsPreset } = await import('./quick/presets/ps.js')
+    await startPsPreset()
   })
 
 // ─── Start command: tuimon start (full config mode) ──────────────────────────

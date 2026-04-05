@@ -179,6 +179,42 @@ TuiMon auto-detects the file format, picks the right widgets, and builds a dashb
 
 Press D to switch to a full-screen data table. Use arrow keys to page through the data. ESC goes back.
 
+### Built-in Dashboards
+
+TuiMon comes with ready-made dashboards for common developer tasks. No setup, no config files. Just run the command.
+
+**Docker** shows a live container dashboard with CPU and memory line charts, a container details table showing Net I/O, Block I/O, and PIDs, and a full docker logs viewer on a second page.
+
+```bash
+tuimon docker             # live dashboard, press L for container logs
+```
+
+**Git** analyzes your repository and shows commit frequency over the last 30 days, top contributors, the most changed files, and recent commits.
+
+```bash
+tuimon git                # run from any git repo
+```
+
+**Process Monitor** shows live CPU and memory usage per process, load average, and a full process table with PID, user, CPU%, memory%, VSZ, RSS, and state.
+
+```bash
+tuimon ps                 # live dashboard, press P for full process table
+```
+
+**Dependencies** parses your lock file and shows total dependencies, direct vs dev, duplicates, version conflicts, and a browsable dependency table.
+
+```bash
+tuimon package-lock.json  # also works with yarn.lock
+```
+
+**Test Coverage** parses coverage reports and shows coverage percentage per file, distribution, and highlights low coverage files. Supports Istanbul JSON, lcov, and JUnit XML for test results.
+
+```bash
+tuimon coverage.json      # Istanbul JSON
+tuimon coverage.lcov      # lcov format
+tuimon results.xml        # JUnit XML test results
+```
+
 ### Watch Live Data
 
 Create a JS file that exports a function returning your data:
@@ -269,6 +305,11 @@ Config is stored in `~/.tuimon/config.json`.
 | Command | What it does |
 |---------|--------------|
 | `tuimon <file>` | Visualize a JSON, CSV, or log file |
+| `tuimon docker` | Live Docker container dashboard (press L for logs) |
+| `tuimon git` | Git repository analysis dashboard |
+| `tuimon ps` | Live process monitor (press P for full table) |
+| `tuimon package-lock.json` | Dependency analysis |
+| `tuimon coverage.json` | Test coverage or JUnit test results |
 | `tuimon watch <file.js>` | Live dashboard from a JS data module |
 | `tuimon watch --url <url>` | Poll a JSON endpoint |
 | `tuimon db <table or query>` | View a database table or run a query |
